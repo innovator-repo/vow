@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vow.app.ui.components.GradientButton
 import com.vow.app.ui.components.StaggeredItem
+import com.vow.app.ui.components.SystemScreens
 import com.vow.app.ui.components.auroraGlow
 import com.vow.app.ui.components.rememberHaptics
 import com.vow.app.ui.theme.*
@@ -57,7 +58,7 @@ class BlockActivity : ComponentActivity() {
     }
 
     private fun goHome() {
-        startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        SystemScreens.goHome(this)
         finish()
     }
 
@@ -66,12 +67,14 @@ class BlockActivity : ComponentActivity() {
         private const val EXTRA_MESSAGE = "message"
 
         fun show(context: Context, title: String, message: String) {
-            context.startActivity(
-                Intent(context, BlockActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                    .putExtra(EXTRA_TITLE, title)
-                    .putExtra(EXTRA_MESSAGE, message)
-            )
+            runCatching {
+                context.startActivity(
+                    Intent(context, BlockActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        .putExtra(EXTRA_TITLE, title)
+                        .putExtra(EXTRA_MESSAGE, message)
+                )
+            }
         }
     }
 }

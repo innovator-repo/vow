@@ -200,8 +200,9 @@ class VowRepository(context: Context) {
             ?: YouTubeAllowance().also { prefs.saveYouTubeAllowance(it) }
         val daysSinceStart = ((System.currentTimeMillis() - current.decayStartedAt) / (24 * 60 * 60 * 1000L)).toInt()
         val decayFactor = Math.pow(0.97, (daysSinceStart / 7).toDouble()) // 3% per week
-        val newAllowance = (current.baselineMinutes * decayFactor).toInt()
-            .coerceAtLeast(current.floorMinutes)
+        val floor = current.floorMinutes.coerceIn(0, YouTubeAllowance.MAX_MINUTES)
+        val baseline = current.baselineMinutes.coerceIn(floor, YouTubeAllowance.MAX_MINUTES)
+        val newAllowance = (baseline * decayFactor).toInt().coerceIn(floor, YouTubeAllowance.MAX_MINUTES)
 
         // Lower allowance after overuse or in evening
         val cal = Calendar.getInstance()
@@ -209,9 +210,13 @@ class VowRepository(context: Context) {
         val eveningPenalty = if (hour >= 20) 0.7 else if (hour >= 18) 0.85 else 1.0
 
         val finalAllowance = (newAllowance * eveningPenalty).toInt()
-            .coerceAtLeast(current.floorMinutes)
+            .coerceIn(floor, YouTubeAllowance.MAX_MINUTES)
 
-        return current.copy(currentAllowanceMinutes = finalAllowance)
+        return current.copy(
+            baselineMinutes = baseline,
+            floorMinutes = floor,
+            currentAllowanceMinutes = finalAllowance
+        )
     }
 
     // Night mode check

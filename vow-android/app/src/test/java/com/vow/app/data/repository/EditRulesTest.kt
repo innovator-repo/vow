@@ -48,4 +48,11 @@ class EditRulesTest {
         assertEquals(48, VowRepository.coolingHours(RestrictionType.UNINSTALL))
         assertEquals(24, VowRepository.coolingHours(RestrictionType.SHORT_VIDEO))
     }
+
+    @Test fun youTubeAllowanceStaysWithinAnHour() {
+        val a = com.vow.app.data.model.YouTubeAllowance()
+        assertEquals(60, com.vow.app.data.model.YouTubeAllowance.MAX_MINUTES)
+        assertTrue(a.baselineMinutes <= 60 && a.currentAllowanceMinutes <= 60)
+        assertTrue(a.floorMinutes >= 0)
+    }
 }

@@ -87,13 +87,18 @@ data class UsageRecord(
 )
 
 data class YouTubeAllowance(
-    val baselineMinutes: Int = 120,
-    val currentAllowanceMinutes: Int = 120,
+    val baselineMinutes: Int = MAX_MINUTES,
+    val currentAllowanceMinutes: Int = MAX_MINUTES,
     val usedTodayMinutes: Int = 0,
     val decayStartedAt: Long = System.currentTimeMillis(),
-    val floorMinutes: Int = 30,
+    val floorMinutes: Int = 0,
     val usedDate: String = ""
-)
+) {
+    companion object {
+        /** The daily allowance always stays within 0..1 hour. */
+        const val MAX_MINUTES = 60
+    }
+}
 
 data class NightModeConfig(
     val enabled: Boolean = true,

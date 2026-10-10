@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.AppOpsManager
 import android.app.admin.DevicePolicyManager
 import com.vow.app.service.admin.VowDeviceAdminReceiver
+import com.vow.app.ui.components.SystemScreens
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
@@ -37,7 +38,7 @@ fun SetupChecklistCard() {
     val context = LocalContext.current
     var usage by remember { mutableStateOf(hasUsageAccess(context)) }
     var accessibility by remember { mutableStateOf(isAccessibilityEnabled(context)) }
-    var vpn by remember { mutableStateOf(VpnService.prepare(context) == null) }
+    var vpn by remember { mutableStateOf(runCatching { VpnService.prepare(context) }.getOrNull() == null) }
     var admin by remember { mutableStateOf(isAdminActive(context)) }
     val prefs = remember { com.vow.app.data.prefs.VowPreferences(context) }
     val restrictions by prefs.getRestrictions().collectAsState(initial = emptyList())
@@ -49,7 +50,7 @@ fun SetupChecklistCard() {
             if (event == Lifecycle.Event.ON_RESUME) {
                 usage = hasUsageAccess(context)
                 accessibility = isAccessibilityEnabled(context)
-                vpn = VpnService.prepare(context) == null
+                vpn = runCatching { VpnService.prepare(context) }.getOrNull() == null
                 admin = isAdminActive(context)
             }
         }
@@ -58,14 +59,14 @@ fun SetupChecklistCard() {
     }
 
     LaunchedEffect(usage) {
-        if (usage) context.startForegroundService(Intent(context, UsageMonitorService::class.java))
+        if (usage) runCatching { context.startForegroundService(Intent(context, UsageMonitorService::class.java)) }
     }
     LaunchedEffect(vpn) {
-        if (vpn) context.startForegroundService(Intent(context, VowVpnService::class.java))
+        if (vpn) runCatching { context.startForegroundService(Intent(context, VowVpnService::class.java)) }
     }
 
     val vpnLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        vpn = VpnService.prepare(context) == null
+        vpn = runCatching { VpnService.prepare(context) }.getOrNull() == null
     }
 
     val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
@@ -80,14 +81,18 @@ fun SetupChecklistCard() {
         DisclosureDialog(d, onDismiss = { disclosure = null }, onAgree = {
             disclosure = null
             when (d) {
-                Disclosure.USAGE -> context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-                Disclosure.ACCESSIBILITY -> context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                Disclosure.VPN -> VpnService.prepare(context)?.let { vpnLauncher.launch(it) }
-                Disclosure.ADMIN -> context.startActivity(
-                    Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
-                        .putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, VowDeviceAdminReceiver.getComponentName(context))
-                        .putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, Disclosure.ADMIN.body)
-                )
+                Disclosure.USAGE -> SystemScreens.openUsageAccess(context)
+                Disclosure.ACCESSIBILITY -> SystemScreens.openAccessibility(context)
+                Disclosure.VPN -> {
+                    val consent = runCatching { VpnService.prepare(context) }.getOrNull()
+                    if (consent == null) vpn = true
+                    else SystemScreens.launchForResult(
+                        consent,
+                        launch = { vpnLauncher.launch(it) },
+                        onUnavailable = { SystemScreens.openVpnSettings(context) }
+                    )
+                }
+                Disclosure.ADMIN -> SystemScreens.addDeviceAdmin(context, Disclosure.ADMIN.body)
             }
         })
     }
