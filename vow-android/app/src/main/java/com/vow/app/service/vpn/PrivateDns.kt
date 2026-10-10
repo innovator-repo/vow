@@ -27,9 +27,6 @@ object PrivateDns {
         }.getOrNull()?.takeIf { it.isNotBlank() }
     }
 
-    /** True when a known adult-content-filtering resolver is active. */
-    fun isFiltering(context: Context): Boolean {
-        val host = hostname(context)?.lowercase() ?: return false
-        return providers.any { host == it.hostname } || host.startsWith("family")
-    }
+    /** True when Android is set to a specific DNS hostname, whichever provider it is. */
+    fun isSet(context: Context): Boolean = hostname(context) != null
 }

@@ -40,7 +40,7 @@ fun SetupChecklistCard() {
     var usage by remember { mutableStateOf(hasUsageAccess(context)) }
     var accessibility by remember { mutableStateOf(isAccessibilityEnabled(context)) }
     var vpnConsented by remember { mutableStateOf(runCatching { VpnService.prepare(context) }.getOrNull() == null) }
-    var privateDns by remember { mutableStateOf(PrivateDns.isFiltering(context)) }
+    var privateDns by remember { mutableStateOf(PrivateDns.isSet(context)) }
     val repo = remember { com.vow.app.data.repository.VowRepository(context) }
     LaunchedEffect(privateDns) {
         if (privateDns) PrivateDns.hostname(context)?.let { repo.lockPrivateDns(it) }
@@ -59,7 +59,7 @@ fun SetupChecklistCard() {
                 usage = hasUsageAccess(context)
                 accessibility = isAccessibilityEnabled(context)
                 vpnConsented = runCatching { VpnService.prepare(context) }.getOrNull() == null
-                privateDns = PrivateDns.isFiltering(context)
+                privateDns = PrivateDns.isSet(context)
                 admin = isAdminActive(context)
             }
         }
@@ -96,7 +96,7 @@ fun SetupChecklistCard() {
             onRetry = { filterHelp = false; requestFilter() },
             onDismiss = {
                 filterHelp = false
-                privateDns = PrivateDns.isFiltering(context)
+                privateDns = PrivateDns.isSet(context)
             }
         )
     }
@@ -146,7 +146,7 @@ fun SetupChecklistCard() {
             }
             ChecklistRow(
                 "Content filter",
-                if (privateDns) "Private DNS is filtering — Vow is holding it in place"
+                if (privateDns) "Private DNS is set — Vow keeps it from being changed"
                 else "Blocks adult sites on this profile's traffic",
                 vpn
             ) { disclosure = Disclosure.VPN }
