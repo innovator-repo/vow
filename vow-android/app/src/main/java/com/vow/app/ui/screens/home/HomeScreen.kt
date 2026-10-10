@@ -79,6 +79,8 @@ fun HomeScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
+            SetupChecklistCard()
+
             // Reclaimed time ring
             ReclaimedTimeRing(
                 reclaimedMinutes = stats.totalReclaimedMinutes,

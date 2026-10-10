@@ -45,7 +45,7 @@ class VowDeviceAdminReceiver : DeviceAdminReceiver() {
             dpm.setAutoTimeRequired(cn, true)
 
             // Prevent accessing app management to force-stop/disable
-            dpm.addUserRestriction(cn, "no_apps_control")
+            dpm.addUserRestriction(cn, UserManager.DISALLOW_APPS_CONTROL)
         }
 
         fun removeDeviceOwnerRestrictions(context: Context) {
@@ -58,7 +58,7 @@ class VowDeviceAdminReceiver : DeviceAdminReceiver() {
             dpm.clearUserRestriction(cn, UserManager.DISALLOW_CONFIG_PRIVATE_DNS)
             dpm.clearUserRestriction(cn, UserManager.DISALLOW_CONFIG_DATE_TIME)
             dpm.setAutoTimeRequired(cn, false)
-            dpm.clearUserRestriction(cn, "no_apps_control")
+            dpm.clearUserRestriction(cn, UserManager.DISALLOW_APPS_CONTROL)
         }
     }
 

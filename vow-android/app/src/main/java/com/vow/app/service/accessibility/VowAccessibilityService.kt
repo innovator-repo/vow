@@ -14,6 +14,7 @@ class VowAccessibilityService : AccessibilityService() {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private lateinit var prefs: VowPreferences
+    private lateinit var profileGuard: ProfileGuard
 
     // Package names for short video detection
     private val shortVideoApps = mapOf(
@@ -24,6 +25,13 @@ class VowAccessibilityService : AccessibilityService() {
         "com.facebook.orca" to listOf("Reels"),
         "com.snapchat.android" to listOf("Spotlight")
     )
+
+    private val browserPackages = setOf(
+        "com.android.chrome", "org.mozilla.firefox", "com.opera.browser",
+        "com.brave.browser", "com.microsoft.emmx", "com.sec.android.app.sbrowser"
+    )
+
+    private val settingsPackage = "com.android.settings"
 
     // Settings pages to redirect away from (fallback mode without Device Owner)
     private val protectedSettingsActivities = setOf(
@@ -36,6 +44,7 @@ class VowAccessibilityService : AccessibilityService() {
     override fun onCreate() {
         super.onCreate()
         prefs = VowPreferences(this)
+        profileGuard = ProfileGuard(this)
     }
 
     override fun onServiceConnected() {
@@ -57,6 +66,9 @@ class VowAccessibilityService : AccessibilityService() {
         scope.launch {
             try {
                 val packageName = event.packageName?.toString() ?: return@launch
+                if (packageName !in shortVideoApps && packageName !in browserPackages &&
+                    packageName != settingsPackage) return@launch
+                if (!profileGuard.isPersonalForeground(packageName)) return@launch
 
                 // Check short video blocking
                 handleShortVideoBlocking(event, packageName)
@@ -120,7 +132,7 @@ class VowAccessibilityService : AccessibilityService() {
     }
 
     private suspend fun handleSettingsProtection(event: AccessibilityEvent, packageName: String) {
-        if (packageName != "com.android.settings") return
+        if (packageName != settingsPackage) return
 
         val isDeviceOwner = prefs.isDeviceOwner.first()
         if (isDeviceOwner) return // Device Owner handles this natively
@@ -139,7 +151,7 @@ class VowAccessibilityService : AccessibilityService() {
             val shouldRedirect = when {
                 protectUninstall && (className.contains("InstalledApp") ||
                         className.contains("UninstallConfirm") ||
-                        className.contains("DeviceAdminAdd")) -> true
+                        className.contains("DeviceAdminAdd")) -> isAboutVow()
                 protectDns && className.contains("PrivateDns") -> true
                 protectDateTime && className.contains("DateTime") -> true
                 else -> false
@@ -161,10 +173,6 @@ class VowAccessibilityService : AccessibilityService() {
         val keywordBlocked = restrictions.any { it.type == RestrictionType.KEYWORD_BLOCK && it.enabled }
         if (!keywordBlocked) return
 
-        val browserPackages = setOf(
-            "com.android.chrome", "org.mozilla.firefox", "com.opera.browser",
-            "com.brave.browser", "com.microsoft.emmx", "com.sec.android.app.sbrowser"
-        )
         if (packageName !in browserPackages) return
 
         val root = rootInActiveWindow ?: return
@@ -194,6 +202,15 @@ class VowAccessibilityService : AccessibilityService() {
             nodes.forEach { it.recycle() }
         }
         root.recycle()
+    }
+
+    // Only guard Vow's own app-info / admin pages, never other apps' (including work apps).
+    private fun isAboutVow(): Boolean {
+        val root = rootInActiveWindow ?: return false
+        val label = getString(com.vow.app.R.string.app_name)
+        val hit = root.findAccessibilityNodeInfosByText(label).any { it.text?.toString() == label }
+        root.recycle()
+        return hit
     }
 
     override fun onInterrupt() {}

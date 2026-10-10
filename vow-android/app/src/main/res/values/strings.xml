@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Vow</string>
+    <string name="accessibility_description">Vow uses this service only to enforce the limits you set on this device: it leaves short-video feeds (Shorts, Reels), closes browser pages containing your blocked keywords, and keeps you from switching off protections you chose. It only acts on apps in your personal profile and never touches a work profile. Nothing is collected or sent anywhere.</string>
 </resources>
