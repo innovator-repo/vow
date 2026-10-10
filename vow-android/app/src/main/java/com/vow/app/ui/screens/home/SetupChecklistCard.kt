@@ -5,6 +5,7 @@ import android.app.AppOpsManager
 import android.app.admin.DevicePolicyManager
 import com.vow.app.service.admin.VowDeviceAdminReceiver
 import com.vow.app.service.vpn.PrivateDns
+import com.vow.app.ui.components.QuietButton
 import com.vow.app.ui.components.SystemScreens
 import android.content.pm.PackageManager
 import android.os.Build
@@ -78,6 +79,29 @@ fun SetupChecklistCard() {
         vpnConsented = runCatching { VpnService.prepare(context) }.getOrNull() == null
     }
 
+    var adminFailed by remember { mutableStateOf(false) }
+    val adminLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        admin = isAdminActive(context)
+        adminFailed = !admin
+    }
+
+    fun requestAdmin() {
+        val intent = SystemScreens.deviceAdminIntent(context, Disclosure.ADMIN.body)
+        if (!SystemScreens.canResolve(context, intent)) {
+            adminFailed = true
+            SystemScreens.openDeviceAdminSettings(context)
+            return
+        }
+        SystemScreens.launchForResult(
+            intent,
+            launch = { adminLauncher.launch(it) },
+            onUnavailable = {
+                adminFailed = true
+                SystemScreens.openDeviceAdminSettings(context)
+            }
+        )
+    }
+
     fun requestFilter() {
         val consent = runCatching { VpnService.prepare(context) }.getOrNull()
         if (consent == null) {
@@ -116,7 +140,7 @@ fun SetupChecklistCard() {
                 Disclosure.USAGE -> SystemScreens.openUsageAccess(context)
                 Disclosure.ACCESSIBILITY -> SystemScreens.openAccessibility(context)
                 Disclosure.VPN -> requestFilter()
-                Disclosure.ADMIN -> SystemScreens.addDeviceAdmin(context, Disclosure.ADMIN.body)
+                Disclosure.ADMIN -> requestAdmin()
             }
         })
     }
@@ -153,6 +177,21 @@ fun SetupChecklistCard() {
             if (wantsAdmin) {
                 ChecklistRow("Uninstall protection", "Stops Vow being removed on impulse", admin) {
                     disclosure = Disclosure.ADMIN
+                }
+                if (adminFailed && !admin) {
+                    Text(
+                        "This phone didn't open the device admin screen. Vow still blocks its own " +
+                            "uninstall page while Accessibility is on. To add the system-level lock, open " +
+                            "Settings → Security → Other security settings → Device admin apps and turn on Vow.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = com.vow.app.ui.theme.VowAmber,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+                    )
+                    QuietButton(
+                        "Open device admin settings",
+                        onClick = { SystemScreens.openDeviceAdminSettings(context) },
+                        color = com.vow.app.ui.theme.VowAmber
+                    )
                 }
             }
         }
@@ -221,8 +260,9 @@ private enum class Disclosure(val title: String, val body: String, val step: Str
     ),
     ADMIN(
         "Turn on uninstall protection",
-        "Making Vow a device admin means it can't be uninstalled until you switch this off again. " +
-            "Vow uses no admin powers: it can't wipe, lock or see anything on your phone.",
+        "Making Vow a device admin means it can't be uninstalled until you switch this off again.\n\n" +
+            "Android makes every device admin declare a permission, so Vow declares the mildest one " +
+            "(locking the screen) and never uses it. It cannot wipe your phone or read anything on it.",
         "On the next screen, tap Activate."
     )
 }

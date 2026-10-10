@@ -48,14 +48,22 @@ object SystemScreens {
         Intent(Settings.ACTION_APPLICATION_SETTINGS)
     )
 
-    fun addDeviceAdmin(context: Context, explanation: String) = start(
-        context,
-        "Open Settings → Security → Device admin apps, then turn on Vow.",
+    fun deviceAdminIntent(context: Context, explanation: String): Intent =
         Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
             .putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, VowDeviceAdminReceiver.getComponentName(context))
-            .putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, explanation),
-        Intent(Settings.ACTION_SECURITY_SETTINGS)
+            .putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, explanation)
+
+    fun openDeviceAdminSettings(context: Context) = start(
+        context,
+        "Open Settings → Security → Other security settings → Device admin apps, then turn on Vow.",
+        Intent("android.settings.DEVICE_ADMIN_SETTINGS"),
+        Intent(Settings.ACTION_SECURITY_SETTINGS),
+        Intent(Settings.ACTION_SETTINGS)
     )
+
+    /** Whether anything on this phone can handle [intent], so a dead launch is caught up front. */
+    fun canResolve(context: Context, intent: Intent): Boolean =
+        runCatching { intent.resolveActivity(context.packageManager) != null }.getOrDefault(false)
 
     fun goHome(context: Context) {
         start(context, "Press the home button to leave this app.", Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME))

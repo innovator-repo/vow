@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android requires a device admin to declare at least one policy. force-lock is the mildest:
+  it only allows locking the screen, which Vow never does. Vow needs admin status solely
+  because an active admin cannot be uninstalled. It never wipes or locks the device.
+-->
 <device-admin xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-policies />
+    <uses-policies>
+        <force-lock />
+    </uses-policies>
 </device-admin>
