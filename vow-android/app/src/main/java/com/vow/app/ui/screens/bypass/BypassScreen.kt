@@ -136,7 +136,8 @@ fun BypassScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
                     Text(
-                        "Loosening needs a 90-second breathing exercise, then a 24-hour cooling-off. " +
+                        "Loosening needs a 90-second breathing exercise, then a " +
+                            "${VowRepository.coolingHours(restriction.type)}-hour cooling-off. " +
                             "No shortcuts \u2014 this gives the urge time to pass.",
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center,

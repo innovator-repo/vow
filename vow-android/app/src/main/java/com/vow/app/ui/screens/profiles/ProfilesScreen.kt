@@ -51,8 +51,8 @@ fun ProfilesScreen(
         ) {
             item {
                 Text(
-                    "Profiles are reusable rule sets. Activate manually or set triggers " +
-                        "for automatic activation based on time, day, Wi-Fi, or location.",
+                    "Profiles are focus modes you switch on yourself, like Work or Study. While one is on, " +
+                        "its apps, keywords and filters are blocked on top of your other protections.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 8.dp)

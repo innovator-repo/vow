@@ -50,6 +50,9 @@ fun BreathingScreen(
     var secondsRemaining by remember { mutableIntStateOf(TOTAL_SECONDS) }
     var phase by remember { mutableStateOf(Phase.IN) }
     val isComplete = secondsRemaining <= 0
+    val restrictions by repo.prefs.getRestrictions().collectAsState(initial = emptyList())
+    val hours = restrictions.find { it.id == restrictionId }
+        ?.let { VowRepository.coolingHours(it.type) } ?: 24
 
     val breath = remember { Animatable(0f) }
 
@@ -164,7 +167,7 @@ fun BreathingScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        "Do you still want to loosen this protection?\nA 24-hour cooling-off period will begin.",
+                        "Do you still want to loosen this protection?\nA $hours-hour cooling-off period will begin.",
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -172,7 +175,7 @@ fun BreathingScreen(
                     Spacer(modifier = Modifier.height(28.dp))
                     GradientButton("Keep it active", onClick = onBack, modifier = Modifier.fillMaxWidth())
                     Spacer(modifier = Modifier.height(4.dp))
-                    QuietButton("Start the 24-hour cooling-off", onClick = {
+                    QuietButton("Start the $hours-hour cooling-off", onClick = {
                         scope.launch {
                             repo.requestLoosening(restrictionId)
                             onComplete()

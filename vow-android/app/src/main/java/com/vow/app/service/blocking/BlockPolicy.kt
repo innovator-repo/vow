@@ -28,6 +28,14 @@ class BlockPolicy(private val context: Context, private val repo: VowRepository)
         val appLimitsOff = restrictions.any { it.type == RestrictionType.APP_LIMIT && !it.enabled }
         val label = rule?.appName ?: appLabel(packageName)
 
+        val profile = prefs.getProfiles().first().firstOrNull { it.isActive && packageName in it.blockedApps }
+        if (profile != null) {
+            return BlockReason(
+                "$label is off during ${profile.name}",
+                "Your ${profile.name} profile is on. Turn the profile off when you're done to use $label again."
+            )
+        }
+
         if (on(RestrictionType.NIGHT_MODE) && repo.isNightModeActive()) {
             val config = prefs.getNightConfig().first()
             val essential = packageName in config.essentialApps || rule?.allowedInNightMode == true

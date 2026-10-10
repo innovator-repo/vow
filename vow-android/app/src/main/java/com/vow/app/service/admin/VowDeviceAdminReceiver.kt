@@ -5,7 +5,10 @@ import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.UserManager
+import com.vow.app.data.model.Restriction
+import com.vow.app.data.model.RestrictionType
 
 class VowDeviceAdminReceiver : DeviceAdminReceiver() {
 
@@ -25,40 +28,29 @@ class VowDeviceAdminReceiver : DeviceAdminReceiver() {
         }
 
         /**
-         * Apply Device Owner restrictions. These grey out settings in the system UI
-         * rather than blocking with a hostile overlay.
+         * Mirrors Vow's restrictions into system policies when Vow is device owner. These grey out
+         * the settings natively, which is stronger than the accessibility fallback.
          */
-        fun applyDeviceOwnerRestrictions(context: Context) {
+        fun syncDeviceOwnerPolicies(context: Context, restrictions: List<Restriction>) {
             val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-            val cn = getComponentName(context)
-
             if (!dpm.isDeviceOwnerApp(context.packageName)) return
+            val cn = getComponentName(context)
+            fun on(t: RestrictionType) = restrictions.any { it.type == t && it.enabled }
 
-            // Block uninstall of this app
-            dpm.setUninstallBlocked(cn, context.packageName, true)
-
-            // Prevent changing private DNS
-            dpm.addUserRestriction(cn, UserManager.DISALLOW_CONFIG_PRIVATE_DNS)
-
-            // Prevent changing date/time
-            dpm.addUserRestriction(cn, UserManager.DISALLOW_CONFIG_DATE_TIME)
-            dpm.setAutoTimeRequired(cn, true)
-
-            // Prevent accessing app management to force-stop/disable
-            dpm.addUserRestriction(cn, UserManager.DISALLOW_APPS_CONTROL)
+            val uninstall = on(RestrictionType.UNINSTALL)
+            dpm.setUninstallBlocked(cn, context.packageName, uninstall)
+            setRestriction(dpm, cn, UserManager.DISALLOW_APPS_CONTROL, uninstall)
+            if (Build.VERSION.SDK_INT >= 29) {
+                setRestriction(dpm, cn, UserManager.DISALLOW_CONFIG_PRIVATE_DNS, on(RestrictionType.DNS))
+            }
+            val time = on(RestrictionType.DATE_TIME)
+            if (Build.VERSION.SDK_INT >= 28) setRestriction(dpm, cn, UserManager.DISALLOW_CONFIG_DATE_TIME, time)
+            @Suppress("DEPRECATION")
+            dpm.setAutoTimeRequired(cn, time)
         }
 
-        fun removeDeviceOwnerRestrictions(context: Context) {
-            val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-            val cn = getComponentName(context)
-
-            if (!dpm.isDeviceOwnerApp(context.packageName)) return
-
-            dpm.setUninstallBlocked(cn, context.packageName, false)
-            dpm.clearUserRestriction(cn, UserManager.DISALLOW_CONFIG_PRIVATE_DNS)
-            dpm.clearUserRestriction(cn, UserManager.DISALLOW_CONFIG_DATE_TIME)
-            dpm.setAutoTimeRequired(cn, false)
-            dpm.clearUserRestriction(cn, UserManager.DISALLOW_APPS_CONTROL)
+        private fun setRestriction(dpm: DevicePolicyManager, cn: ComponentName, key: String, on: Boolean) {
+            if (on) dpm.addUserRestriction(cn, key) else dpm.clearUserRestriction(cn, key)
         }
     }
 
@@ -71,6 +63,6 @@ class VowDeviceAdminReceiver : DeviceAdminReceiver() {
     }
 
     override fun onDisableRequested(context: Context, intent: Intent): CharSequence {
-        return "Disabling Vow's device admin will remove uninstall protection. This action requires your Vow password."
+        return "Turning this off removes Vow's uninstall protection. The commitments you made in Vow stay in place."
     }
 }

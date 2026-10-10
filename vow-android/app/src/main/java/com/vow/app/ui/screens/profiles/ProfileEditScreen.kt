@@ -40,13 +40,15 @@ fun ProfileEditScreen(
     var blockedKeywords by remember { mutableStateOf(existingProfile?.blockedKeywords ?: emptyList()) }
     var newKeyword by remember { mutableStateOf("") }
 
-    val installedApps = remember {
-        val pm = context.packageManager
-        pm.getInstalledApplications(PackageManager.GET_META_DATA)
-            .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
-            .filter { it.packageName != context.packageName }
-            .map { it.packageName to pm.getApplicationLabel(it).toString() }
-            .sortedBy { it.second }
+    val installedApps by produceState(initialValue = emptyList<Pair<String, String>>()) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val pm = context.packageManager
+            pm.getInstalledApplications(PackageManager.GET_META_DATA)
+                .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
+                .filter { it.packageName != context.packageName }
+                .map { it.packageName to pm.getApplicationLabel(it).toString() }
+                .sortedBy { it.second.lowercase() }
+        }
     }
 
     Scaffold(

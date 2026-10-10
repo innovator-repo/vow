@@ -25,10 +25,12 @@ fun KeywordBlockScreen(
     val keywords by repo.prefs.getBlockedKeywords().collectAsState(initial = emptyList())
     val scope = rememberCoroutineScope()
     var newKeyword by remember { mutableStateOf("") }
+    val feedback = com.vow.app.ui.components.rememberEditFeedback()
 
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                 title = { Text("Blocked Keywords") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -45,7 +47,7 @@ fun KeywordBlockScreen(
                 .padding(horizontal = 16.dp)
         ) {
             Text(
-                "Websites containing these keywords in their URL will be blocked.",
+                "Websites whose address contains these words are blocked. Adding is instant; removing takes 24 hours.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 8.dp)
@@ -68,8 +70,8 @@ fun KeywordBlockScreen(
                     onClick = {
                         if (newKeyword.isNotBlank()) {
                             scope.launch {
-                                val updated = keywords + BlockedKeyword(keyword = newKeyword.trim())
-                                repo.prefs.saveBlockedKeywords(updated)
+                                val kw = BlockedKeyword(keyword = newKeyword.trim().lowercase())
+                                feedback(repo.updateKeyword(kw.id, kw))
                                 newKeyword = ""
                             }
                         }
@@ -112,19 +114,12 @@ fun KeywordBlockScreen(
                                 com.vow.app.ui.components.HapticSwitch(
                                     checked = keyword.enabled,
                                     onCheckedChange = { enabled ->
-                                        scope.launch {
-                                            val updated = keywords.map {
-                                                if (it.id == keyword.id) it.copy(enabled = enabled) else it
-                                            }
-                                            repo.prefs.saveBlockedKeywords(updated)
-                                        }
+                                        scope.launch { feedback(repo.updateKeyword(keyword.id, keyword.copy(enabled = enabled))) }
                                     }
                                 )
                                 IconButton(
                                     onClick = {
-                                        scope.launch {
-                                            repo.prefs.saveBlockedKeywords(keywords.filter { it.id != keyword.id })
-                                        }
+                                        scope.launch { feedback(repo.updateKeyword(keyword.id, null)) }
                                     }
                                 ) {
                                     Icon(Icons.Default.Delete, "Remove", tint = MaterialTheme.colorScheme.error)

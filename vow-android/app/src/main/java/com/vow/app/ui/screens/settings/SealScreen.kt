@@ -104,7 +104,9 @@ fun SealScreen(
 
                 SealState.PENDING_SEAL -> {
                     val elapsed = System.currentTimeMillis() - (restriction.sealRequestedAt ?: 0)
-                    val hoursLeft = ((24 * 60 * 60 * 1000L - elapsed) / (60 * 60 * 1000L)).coerceAtLeast(0)
+                    val msLeft = (24 * 60 * 60 * 1000L - elapsed).coerceAtLeast(0)
+                    val left = (msLeft + 59_999) / 60_000
+                    val leftText = if (left >= 60) "${left / 60}h ${left % 60}m" else "${left}m"
 
                     Text(
                         "Seal in progress",
@@ -113,9 +115,9 @@ fun SealScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    if (hoursLeft > 0) {
+                    if (msLeft > 0) {
                         Text(
-                            "You need to wait ${hoursLeft}h more before you can confirm.\n\n" +
+                            "You need to wait $leftText more before you can confirm.\n\n" +
                                 "This wait ensures your decision is deliberate, " +
                                 "not impulsive.",
                             style = MaterialTheme.typography.bodyMedium,

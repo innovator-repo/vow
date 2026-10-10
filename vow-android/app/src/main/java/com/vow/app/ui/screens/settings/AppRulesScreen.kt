@@ -27,15 +27,18 @@ fun AppRulesScreen(
     val context = LocalContext.current
     val appRules by repo.prefs.getAppRules().collectAsState(initial = emptyList())
     val scope = rememberCoroutineScope()
+    val feedback = com.vow.app.ui.components.rememberEditFeedback()
 
-    // Get installed apps
-    val installedApps = remember {
-        getInstalledApps(context).sortedBy { it.appName }
+    val installedApps by produceState(initialValue = emptyList<InstalledApp>()) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            getInstalledApps(context).sortedBy { it.appName.lowercase() }
+        }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                 title = { Text("App Rules") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -53,7 +56,7 @@ fun AppRulesScreen(
         ) {
             item {
                 Text(
-                    "Set daily time limits or block apps entirely.",
+                    "Set daily time limits or block apps entirely. Stricter changes apply now; looser ones take 24 hours.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 8.dp)
@@ -70,17 +73,10 @@ fun AppRulesScreen(
                     AppRuleCard(
                         rule = rule,
                         onUpdate = { updated ->
-                            scope.launch {
-                                val newList = appRules.map {
-                                    if (it.packageName == updated.packageName) updated else it
-                                }
-                                repo.prefs.saveAppRules(newList)
-                            }
+                            scope.launch { feedback(repo.updateAppRule(updated.packageName, updated)) }
                         },
                         onRemove = {
-                            scope.launch {
-                                repo.prefs.saveAppRules(appRules.filter { it.packageName != rule.packageName })
-                            }
+                            scope.launch { feedback(repo.updateAppRule(rule.packageName, null)) }
                         }
                     )
                 }
@@ -104,7 +100,7 @@ fun AppRulesScreen(
                                 appName = app.appName,
                                 dailyLimitMinutes = 60
                             )
-                            repo.prefs.saveAppRules(appRules + newRule)
+                            feedback(repo.updateAppRule(newRule.packageName, newRule))
                         }
                     },
                     modifier = Modifier

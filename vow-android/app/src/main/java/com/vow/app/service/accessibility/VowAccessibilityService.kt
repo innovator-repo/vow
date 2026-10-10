@@ -2,18 +2,22 @@ package com.vow.app.service.accessibility
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
-import android.content.Intent
+import android.app.admin.DevicePolicyManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.vow.app.data.model.RestrictionType
 import com.vow.app.data.prefs.VowPreferences
 import com.vow.app.data.repository.VowRepository
+import com.vow.app.service.admin.VowDeviceAdminReceiver
 import com.vow.app.service.blocking.BlockPolicy
 import com.vow.app.ui.block.BlockActivity
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 
 class VowAccessibilityService : AccessibilityService() {
+
+    /** Copied out synchronously: before Android 13 the event object is recycled once the callback returns. */
+    private data class Ev(val type: Int, val pkg: String, val cls: String?)
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private lateinit var prefs: VowPreferences
@@ -22,13 +26,10 @@ class VowAccessibilityService : AccessibilityService() {
     @Volatile private var currentApp: String? = null
     private var lastBlock: Pair<String, Long>? = null
 
-    // Package names for short video detection
     private val shortVideoApps = mapOf(
         "com.google.android.youtube" to listOf("Shorts", "shorts_pivot_item"),
-        "com.zhiliaoapp.musically" to emptyList(), // TikTok - block feed entirely is optional
         "com.instagram.android" to listOf("Reels", "reels_tray"),
         "com.facebook.katana" to listOf("Reels"),
-        "com.facebook.orca" to listOf("Reels"),
         "com.snapchat.android" to listOf("Spotlight")
     )
 
@@ -38,13 +39,9 @@ class VowAccessibilityService : AccessibilityService() {
     )
 
     private val settingsPackage = "com.android.settings"
-
-    // Settings pages to redirect away from (fallback mode without Device Owner)
-    private val protectedSettingsActivities = setOf(
-        "com.android.settings/.DeviceAdminAdd",
-        "com.android.settings/.applications.InstalledAppDetailsTop",
-        "com.android.settings/.network.PrivateDnsModeDialogPreference",
-        "com.android.settings/.datetime.DateTimeSettings"
+    private val installerPackages = setOf(
+        "com.google.android.packageinstaller", "com.android.packageinstaller",
+        "com.samsung.android.packageinstaller"
     )
 
     override fun onCreate() {
@@ -55,176 +52,46 @@ class VowAccessibilityService : AccessibilityService() {
     }
 
     override fun onServiceConnected() {
-        val info = AccessibilityServiceInfo().apply {
+        serviceInfo = AccessibilityServiceInfo().apply {
             eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
-                    AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
-                    AccessibilityEvent.TYPE_VIEW_SCROLLED
+                AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
+                AccessibilityEvent.TYPE_VIEW_SCROLLED
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
             flags = AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
-                    AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+                AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
             notificationTimeout = 300
         }
-        serviceInfo = info
 
         scope.launch {
             while (isActive) {
                 delay(20_000)
-                currentApp?.let { pkg ->
-                    try { enforceAppRules(pkg) } catch (_: Exception) {}
-                }
+                currentApp?.let { pkg -> runCatching { enforceAppRules(pkg) } }
             }
         }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         event ?: return
-
-        scope.launch {
-            try {
-                val packageName = event.packageName?.toString() ?: return@launch
-                if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
-                    packageName != this@VowAccessibilityService.packageName &&
-                    packageName != "com.android.systemui"
-                ) {
-                    currentApp = packageName
-                    enforceAppRules(packageName)
-                }
-                if (packageName !in shortVideoApps && packageName !in browserPackages &&
-                    packageName != settingsPackage) return@launch
-                if (!profileGuard.isPersonalForeground(packageName)) return@launch
-
-                // Check short video blocking
-                handleShortVideoBlocking(event, packageName)
-
-                // Settings protection (fallback when not Device Owner)
-                handleSettingsProtection(event, packageName)
-
-                // URL bar keyword checking in browsers
-                handleBrowserKeywordBlocking(event, packageName)
-            } catch (_: Exception) {}
-        }
+        val ev = Ev(event.eventType, event.packageName?.toString() ?: return, event.className?.toString())
+        scope.launch { runCatching { handle(ev) } }
     }
 
-    private suspend fun handleShortVideoBlocking(event: AccessibilityEvent, packageName: String) {
-        val restrictions = prefs.getRestrictions().first()
-        val shortVideoBlocked = restrictions.any {
-            it.type == RestrictionType.SHORT_VIDEO && it.enabled
+    private suspend fun handle(ev: Ev) {
+        if (ev.type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+            ev.pkg != packageName && ev.pkg != "com.android.systemui"
+        ) {
+            currentApp = ev.pkg
+            enforceAppRules(ev.pkg)
         }
-        if (!shortVideoBlocked) return
 
-        val shortVideoConfig = shortVideoApps[packageName] ?: return
+        val relevant = ev.pkg in shortVideoApps || ev.pkg in browserPackages ||
+            ev.pkg == settingsPackage || ev.pkg in installerPackages
+        if (!relevant) return
+        if (ev.pkg !in installerPackages && !profileGuard.isPersonalForeground(ev.pkg)) return
 
-        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
-            event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
-
-            val rootNode = rootInActiveWindow ?: return
-
-            // Check if we're in a short video section
-            if (isInShortVideoSection(rootNode, shortVideoConfig)) {
-                // Press back to exit the short video feed
-                performGlobalAction(GLOBAL_ACTION_BACK)
-            }
-
-            rootNode.recycle()
-        }
-    }
-
-    private fun isInShortVideoSection(root: AccessibilityNodeInfo, indicators: List<String>): Boolean {
-        if (indicators.isEmpty()) return false
-
-        for (indicator in indicators) {
-            // Check view IDs
-            val nodes = root.findAccessibilityNodeInfosByViewId(indicator)
-            if (nodes.isNotEmpty()) {
-                nodes.forEach { it.recycle() }
-                return true
-            }
-
-            // Check text content
-            val textNodes = root.findAccessibilityNodeInfosByText(indicator)
-            for (node in textNodes) {
-                // Check if this is a tab/pivot that is selected
-                if (node.isSelected || node.isFocused) {
-                    textNodes.forEach { it.recycle() }
-                    return true
-                }
-            }
-            textNodes.forEach { it.recycle() }
-        }
-        return false
-    }
-
-    private suspend fun handleSettingsProtection(event: AccessibilityEvent, packageName: String) {
-        if (packageName != settingsPackage) return
-
-        val isDeviceOwner = prefs.isDeviceOwner.first()
-        if (isDeviceOwner) return // Device Owner handles this natively
-
-        val restrictions = prefs.getRestrictions().first()
-        val protectUninstall = restrictions.any { it.type == RestrictionType.UNINSTALL && it.enabled }
-        val protectDns = restrictions.any { it.type == RestrictionType.DNS && it.enabled }
-        val protectDateTime = restrictions.any { it.type == RestrictionType.DATE_TIME && it.enabled }
-
-        if (!protectUninstall && !protectDns && !protectDateTime) return
-
-        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            val className = event.className?.toString() ?: return
-
-            // Check if user is in a protected settings area
-            val shouldRedirect = when {
-                protectUninstall && (className.contains("InstalledApp") ||
-                        className.contains("UninstallConfirm") ||
-                        className.contains("DeviceAdminAdd")) -> isAboutVow()
-                protectDns && className.contains("PrivateDns") -> true
-                protectDateTime && className.contains("DateTime") -> true
-                else -> false
-            }
-
-            if (shouldRedirect) {
-                // Gently redirect home instead of blocking with an overlay
-                val homeIntent = Intent(Intent.ACTION_MAIN).apply {
-                    addCategory(Intent.CATEGORY_HOME)
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
-                startActivity(homeIntent)
-            }
-        }
-    }
-
-    private suspend fun handleBrowserKeywordBlocking(event: AccessibilityEvent, packageName: String) {
-        val restrictions = prefs.getRestrictions().first()
-        val keywordBlocked = restrictions.any { it.type == RestrictionType.KEYWORD_BLOCK && it.enabled }
-        if (!keywordBlocked) return
-
-        if (packageName !in browserPackages) return
-
-        val root = rootInActiveWindow ?: return
-        val keywords = prefs.getBlockedKeywords().first().filter { it.enabled }.map { it.keyword.lowercase() }
-
-        // Find URL bar
-        val urlBarIds = listOf(
-            "$packageName:id/url_bar",
-            "$packageName:id/url_field",
-            "$packageName:id/search",
-            "$packageName:id/mozac_browser_toolbar_url_view"
-        )
-
-        for (id in urlBarIds) {
-            val nodes = root.findAccessibilityNodeInfosByViewId(id)
-            for (node in nodes) {
-                val text = node.text?.toString()?.lowercase() ?: continue
-                for (kw in keywords) {
-                    if (text.contains(kw)) {
-                        performGlobalAction(GLOBAL_ACTION_BACK)
-                        nodes.forEach { it.recycle() }
-                        root.recycle()
-                        return
-                    }
-                }
-            }
-            nodes.forEach { it.recycle() }
-        }
-        root.recycle()
+        handleShortVideoBlocking(ev)
+        handleSelfProtection(ev)
+        handleBrowserKeywordBlocking(ev)
     }
 
     private suspend fun enforceAppRules(packageName: String) {
@@ -238,13 +105,88 @@ class VowAccessibilityService : AccessibilityService() {
         BlockActivity.show(this, reason.title, reason.message)
     }
 
-    // Only guard Vow's own app-info / admin pages, never other apps' (including work apps).
-    private fun isAboutVow(): Boolean {
-        val root = rootInActiveWindow ?: return false
+    private suspend fun shortVideoBlocked(): Boolean =
+        prefs.getRestrictions().first().any { it.type == RestrictionType.SHORT_VIDEO && it.enabled } ||
+            prefs.getProfiles().first().any { it.isActive && it.blockShortVideos }
+
+    private suspend fun handleShortVideoBlocking(ev: Ev) {
+        val indicators = shortVideoApps[ev.pkg] ?: return
+        if (ev.type != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && ev.type != AccessibilityEvent.TYPE_VIEW_SCROLLED) return
+        if (!shortVideoBlocked()) return
+        val root = rootInActiveWindow ?: return
+        if (isInShortVideoSection(root, ev.pkg, indicators)) performGlobalAction(GLOBAL_ACTION_BACK)
+    }
+
+    private fun isInShortVideoSection(root: AccessibilityNodeInfo, pkg: String, indicators: List<String>): Boolean {
+        for (indicator in indicators) {
+            if (root.findAccessibilityNodeInfosByViewId("$pkg:id/$indicator").isNotEmpty()) return true
+            if (root.findAccessibilityNodeInfosByText(indicator).any { it.isSelected }) return true
+        }
+        return false
+    }
+
+    /**
+     * Keeps protections from being switched off around Vow: its app-info / uninstall / device-admin
+     * pages, its accessibility switch and its VPN page while uninstall protection is on, plus the
+     * Private DNS and date/time settings when those locks are on. Only screens about Vow are touched.
+     */
+    private suspend fun handleSelfProtection(ev: Ev) {
+        if (ev.type != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        if (ev.pkg != settingsPackage && ev.pkg !in installerPackages) return
+        if (prefs.isDeviceOwner.first()) return
+
+        val restrictions = prefs.getRestrictions().first()
+        fun on(t: RestrictionType) = restrictions.any { it.type == t && it.enabled }
+        val protectUninstall = on(RestrictionType.UNINSTALL)
+        val protectDns = on(RestrictionType.DNS)
+        val protectTime = on(RestrictionType.DATE_TIME)
+        if (!protectUninstall && !protectDns && !protectTime) return
+
+        val root = rootInActiveWindow ?: return
+        val cls = ev.cls.orEmpty()
+        fun has(text: String) = root.findAccessibilityNodeInfosByText(text).isNotEmpty()
         val label = getString(com.vow.app.R.string.app_name)
-        val hit = root.findAccessibilityNodeInfosByText(label).any { it.text?.toString() == label }
-        root.recycle()
-        return hit
+        val aboutVow = root.findAccessibilityNodeInfosByText(label).any { it.text?.toString() == label }
+
+        val block = when {
+            protectUninstall && ev.pkg in installerPackages -> aboutVow
+            protectUninstall && aboutVow && cls.contains("DeviceAdminAdd") -> isAdminActive()
+            protectUninstall && aboutVow && (cls.contains("InstalledApp") || cls.contains("AppInfo") ||
+                has("Force stop") || has("Uninstall")) -> true
+            protectUninstall && has("Use $label") -> true
+            protectUninstall && aboutVow && (has("Always-on VPN") || has("Forget VPN")) -> true
+            protectDns && (cls.contains("PrivateDns") || has("Private DNS provider hostname")) -> true
+            protectTime && (cls.contains("DateTime") || has("Set time automatically")) -> true
+            else -> false
+        }
+        if (block) performGlobalAction(GLOBAL_ACTION_BACK)
+    }
+
+    private fun isAdminActive(): Boolean =
+        getSystemService(DevicePolicyManager::class.java)
+            .isAdminActive(VowDeviceAdminReceiver.getComponentName(this))
+
+    private suspend fun handleBrowserKeywordBlocking(ev: Ev) {
+        if (ev.pkg !in browserPackages) return
+        val restrictionOn = prefs.getRestrictions().first().any { it.type == RestrictionType.KEYWORD_BLOCK && it.enabled }
+        val keywords = buildList {
+            if (restrictionOn) addAll(prefs.getBlockedKeywords().first().filter { it.enabled }.map { it.keyword })
+            prefs.getProfiles().first().filter { it.isActive }.forEach { addAll(it.blockedKeywords) }
+        }.map { it.lowercase().trim() }.filter { it.isNotEmpty() }
+        if (keywords.isEmpty()) return
+
+        val root = rootInActiveWindow ?: return
+        val urlBarIds = listOf("url_bar", "url_field", "search", "mozac_browser_toolbar_url_view", "location_bar_edit_text")
+        for (id in urlBarIds) {
+            for (node in root.findAccessibilityNodeInfosByViewId("${ev.pkg}:id/$id")) {
+                if (node.isFocused) continue // don't fight the user while they're typing
+                val text = node.text?.toString()?.lowercase() ?: continue
+                if (keywords.any { text.contains(it) }) {
+                    performGlobalAction(GLOBAL_ACTION_BACK)
+                    return
+                }
+            }
+        }
     }
 
     override fun onInterrupt() {}

@@ -53,6 +53,9 @@ class VowVpnService : VpnService() {
         private val VPN_DNS_BYTES = byteArrayOf(10, 111, 222.toByte(), 53)
         private val UPSTREAMS = listOf("1.1.1.1", "8.8.8.8")
 
+        /** Firefox turns off its built-in encrypted DNS when this name doesn't resolve. */
+        private const val DOH_CANARY = "use-application-dns.net"
+
         private val adultDomains = setOf(
             "pornhub.com", "xvideos.com", "xnxx.com", "xhamster.com",
             "redtube.com", "youporn.com", "tube8.com", "spankbang.com",
@@ -70,12 +73,16 @@ class VowVpnService : VpnService() {
             "twistys.com", "babes.com", "wicked.com"
         )
         private val adultTlds = setOf(".xxx", ".porn", ".sex", ".adult")
-        private val adultSegments = setOf("porn", "xxx", "sex", "hentai", "nsfw", "adult", "erotic")
+        private val adultLabels = setOf("porn", "xxx", "sex", "hentai", "nsfw", "adult", "erotic")
+        private val strongWords = setOf("porn", "xxx", "hentai", "nsfw")
 
         fun isAdultDomain(domain: String): Boolean {
             if (adultDomains.any { domain == it || domain.endsWith(".$it") }) return true
             if (adultTlds.any { domain.endsWith(it) }) return true
-            return domain.split('.', '-').any { it in adultSegments }
+            val labels = domain.split('.')
+            if (labels.any { it in adultLabels }) return true
+            // Hyphenated names only match unambiguous words, so "adult-education" stays reachable.
+            return labels.flatMap { it.split('-') }.any { it in strongWords }
         }
     }
 
@@ -84,11 +91,16 @@ class VowVpnService : VpnService() {
         prefs = VowPreferences(this)
         createNotificationChannel()
         scope.launch {
-            combine(prefs.getRestrictions(), prefs.getBlockedKeywords()) { r, k -> r to k }
-                .collect { (restrictions, kws) ->
-                    blockAdult = restrictions.any { it.type == RestrictionType.ADULT_SITES && it.enabled }
-                    blockKeywords = restrictions.any { it.type == RestrictionType.KEYWORD_BLOCK && it.enabled }
-                    keywords = kws.filter { it.enabled }.map { it.keyword.lowercase().trim() }.filter { it.isNotEmpty() }
+            combine(prefs.getRestrictions(), prefs.getBlockedKeywords(), prefs.getProfiles()) { r, k, p -> Triple(r, k, p) }
+                .collect { (restrictions, kws, profiles) ->
+                    val active = profiles.filter { it.isActive }
+                    blockAdult = restrictions.any { it.type == RestrictionType.ADULT_SITES && it.enabled } ||
+                        active.any { it.blockAdultSites }
+                    val restrictionKeywords = if (restrictions.any { it.type == RestrictionType.KEYWORD_BLOCK && it.enabled })
+                        kws.filter { it.enabled }.map { it.keyword } else emptyList()
+                    keywords = (restrictionKeywords + active.flatMap { it.blockedKeywords })
+                        .map { it.lowercase().trim() }.filter { it.isNotEmpty() }.distinct()
+                    blockKeywords = keywords.isNotEmpty()
                 }
         }
     }
@@ -156,7 +168,8 @@ class VowVpnService : VpnService() {
         val q = DnsPacket.parseQuery(packet, VPN_DNS_BYTES) ?: return
         val domain = q.domain.lowercase().trimEnd('.')
 
-        val blocked = (blockAdult && isAdultDomain(domain)) ||
+        val blocked = domain == DOH_CANARY ||
+            (blockAdult && isAdultDomain(domain)) ||
             (blockKeywords && keywords.any { domain.contains(it) })
 
         if (blocked) {

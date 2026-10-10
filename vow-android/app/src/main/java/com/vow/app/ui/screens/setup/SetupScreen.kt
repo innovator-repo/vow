@@ -127,7 +127,6 @@ fun SetupScreen(
                                     repo.enableRestriction(type, reason, ifThenPlan)
                                 }
 
-                                repo.prefs.setSetupComplete(true)
                                 onSetupComplete()
                             }
                         }

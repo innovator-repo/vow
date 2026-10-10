@@ -51,8 +51,9 @@ fun PasswordSetupScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            "This password protects entry to the app, any loosening requests, and prevents tampering.\n\n" +
-                "Choose something you won't forget — there is no recovery.",
+            "Vow asks for this password whenever it opens, so nobody else can change your protections. " +
+                "For accountability, let someone you trust choose it.\n\n" +
+                "There is no recovery, so choose something that will be remembered.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -104,11 +105,12 @@ fun PasswordSetupScreen(
         Button(
             onClick = {
                 when {
-                    password.length < 6 -> error = "Password must be at least 6 characters"
+                    password.length < 6 -> error = "Use at least 6 characters"
                     password != confirmPassword -> error = "Passwords don't match"
                     else -> {
                         scope.launch {
                             repo.prefs.setPassword(repo.hashPassword(password))
+                            repo.prefs.setSetupComplete(true)
                             onComplete()
                         }
                     }
@@ -120,7 +122,7 @@ fun PasswordSetupScreen(
             Text("Set Password")
         }
 
-        TextButton(onClick = { onComplete() }) {
+        TextButton(onClick = { scope.launch { repo.prefs.setSetupComplete(true); onComplete() } }) {
             Text("Skip (not recommended)")
         }
     }

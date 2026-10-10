@@ -48,4 +48,11 @@ class DnsPacketTest {
             assertFalse(it, VowVpnService.isAdultDomain(it))
         }
     }
+
+    @Test fun hyphenatedNamesOnlyMatchStrongWords() {
+        assertFalse(VowVpnService.isAdultDomain("adult-education.org"))
+        assertFalse(VowVpnService.isAdultDomain("sex-ed.example.com"))
+        assertTrue(VowVpnService.isAdultDomain("free-porn-videos.net"))
+        assertTrue(VowVpnService.isAdultDomain("sex.example.com"))
+    }
 }

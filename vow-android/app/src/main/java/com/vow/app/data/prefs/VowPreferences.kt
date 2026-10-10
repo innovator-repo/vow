@@ -31,7 +31,56 @@ class VowPreferences(private val context: Context) {
         private val KEY_FIRST_LAUNCH = longPreferencesKey("first_launch")
         private val KEY_ADULT_DOMAINS = stringPreferencesKey("adult_domains_extra")
         private val KEY_DEVICE_OWNER = booleanPreferencesKey("is_device_owner")
+        private val KEY_PENDING_CHANGES = stringPreferencesKey("pending_changes")
+
+        private inline fun <T> safe(fallback: T, block: () -> T): T =
+            try { block() } catch (_: Exception) { fallback }
     }
+
+    // Pending (delayed) loosening edits
+    fun getPendingChanges(): Flow<List<PendingChange>> = context.dataStore.data.map { prefs ->
+        safe(emptyList()) {
+            val arr = JSONArray(prefs[KEY_PENDING_CHANGES] ?: "[]")
+            (0 until arr.length()).map { i ->
+                val o = arr.getJSONObject(i)
+                PendingChange(
+                    id = o.getString("id"),
+                    kind = ChangeKind.valueOf(o.getString("kind")),
+                    key = o.getString("key"),
+                    description = o.getString("description"),
+                    baseJson = o.optString("baseJson").takeIf { o.has("baseJson") && !o.isNull("baseJson") },
+                    newJson = o.optString("newJson").takeIf { o.has("newJson") && !o.isNull("newJson") },
+                    requestedAt = o.getLong("requestedAt"),
+                    maturesAt = o.getLong("maturesAt"),
+                    applied = o.getBoolean("applied"),
+                    cancelled = o.getBoolean("cancelled")
+                )
+            }
+        }
+    }
+
+    suspend fun savePendingChanges(list: List<PendingChange>) {
+        val arr = JSONArray()
+        list.forEach { c ->
+            arr.put(JSONObject().apply {
+                put("id", c.id); put("kind", c.kind.name); put("key", c.key)
+                put("description", c.description)
+                put("baseJson", c.baseJson ?: JSONObject.NULL)
+                put("newJson", c.newJson ?: JSONObject.NULL)
+                put("requestedAt", c.requestedAt); put("maturesAt", c.maturesAt)
+                put("applied", c.applied); put("cancelled", c.cancelled)
+            })
+        }
+        context.dataStore.edit { it[KEY_PENDING_CHANGES] = arr.toString() }
+    }
+
+    // Single-item codecs used for pending-change snapshots
+    fun encodeAppRule(r: AppRule): String = JSONArray(appRulesToJson(listOf(r))).getJSONObject(0).toString()
+    fun decodeAppRule(json: String): AppRule = parseAppRules("[$json]").first()
+    fun encodeKeyword(k: BlockedKeyword): String = JSONArray(keywordsToJson(listOf(k))).getJSONObject(0).toString()
+    fun decodeKeyword(json: String): BlockedKeyword = parseKeywords("[$json]").first()
+    fun encodeNightConfig(c: NightModeConfig): String = nightConfigToJson(c)
+    fun decodeNightConfig(json: String): NightModeConfig = parseNightConfig(json)
 
     val isSetupComplete: Flow<Boolean> = context.dataStore.data.map { it[KEY_SETUP_COMPLETE] ?: false }
     val isBaselineDone: Flow<Boolean> = context.dataStore.data.map { it[KEY_BASELINE_DONE] ?: false }
@@ -65,8 +114,7 @@ class VowPreferences(private val context: Context) {
 
     // Restrictions
     fun getRestrictions(): Flow<List<Restriction>> = context.dataStore.data.map { prefs ->
-        val json = prefs[KEY_RESTRICTIONS] ?: "[]"
-        parseRestrictions(json)
+        safe(emptyList()) { parseRestrictions(prefs[KEY_RESTRICTIONS] ?: "[]") }
     }
 
     suspend fun saveRestrictions(list: List<Restriction>) {
@@ -75,8 +123,7 @@ class VowPreferences(private val context: Context) {
 
     // Blocked Keywords
     fun getBlockedKeywords(): Flow<List<BlockedKeyword>> = context.dataStore.data.map { prefs ->
-        val json = prefs[KEY_KEYWORDS] ?: "[]"
-        parseKeywords(json)
+        safe(emptyList()) { parseKeywords(prefs[KEY_KEYWORDS] ?: "[]") }
     }
 
     suspend fun saveBlockedKeywords(list: List<BlockedKeyword>) {
@@ -85,8 +132,7 @@ class VowPreferences(private val context: Context) {
 
     // Profiles
     fun getProfiles(): Flow<List<Profile>> = context.dataStore.data.map { prefs ->
-        val json = prefs[KEY_PROFILES] ?: "[]"
-        parseProfiles(json)
+        safe(emptyList()) { parseProfiles(prefs[KEY_PROFILES] ?: "[]") }
     }
 
     suspend fun saveProfiles(list: List<Profile>) {
@@ -95,8 +141,7 @@ class VowPreferences(private val context: Context) {
 
     // App Rules
     fun getAppRules(): Flow<List<AppRule>> = context.dataStore.data.map { prefs ->
-        val json = prefs[KEY_APP_RULES] ?: "[]"
-        parseAppRules(json)
+        safe(emptyList()) { parseAppRules(prefs[KEY_APP_RULES] ?: "[]") }
     }
 
     suspend fun saveAppRules(list: List<AppRule>) {
@@ -105,8 +150,7 @@ class VowPreferences(private val context: Context) {
 
     // Cooling Off
     fun getCoolingOffRequests(): Flow<List<CoolingOffRequest>> = context.dataStore.data.map { prefs ->
-        val json = prefs[KEY_COOLING_OFF] ?: "[]"
-        parseCoolingOff(json)
+        safe(emptyList()) { parseCoolingOff(prefs[KEY_COOLING_OFF] ?: "[]") }
     }
 
     suspend fun saveCoolingOffRequests(list: List<CoolingOffRequest>) {
@@ -116,7 +160,7 @@ class VowPreferences(private val context: Context) {
     // Night config
     fun getNightConfig(): Flow<NightModeConfig> = context.dataStore.data.map { prefs ->
         val json = prefs[KEY_NIGHT_CONFIG]
-        if (json != null) parseNightConfig(json) else NightModeConfig()
+        if (json != null) safe(NightModeConfig()) { parseNightConfig(json) } else NightModeConfig()
     }
 
     suspend fun saveNightConfig(config: NightModeConfig) {
@@ -124,9 +168,12 @@ class VowPreferences(private val context: Context) {
     }
 
     // YouTube Allowance
-    fun getYouTubeAllowance(): Flow<YouTubeAllowance> = context.dataStore.data.map { prefs ->
+    fun getYouTubeAllowance(): Flow<YouTubeAllowance> = getStoredYouTubeAllowance().map { it ?: YouTubeAllowance() }
+
+    /** Null until an allowance has been saved, so the decay start can be fixed on first use. */
+    fun getStoredYouTubeAllowance(): Flow<YouTubeAllowance?> = context.dataStore.data.map { prefs ->
         val json = prefs[KEY_YOUTUBE]
-        if (json != null) parseYouTubeAllowance(json) else YouTubeAllowance()
+        if (json != null) safe(YouTubeAllowance()) { parseYouTubeAllowance(json) } else null
     }
 
     suspend fun saveYouTubeAllowance(allowance: YouTubeAllowance) {
@@ -136,7 +183,7 @@ class VowPreferences(private val context: Context) {
     // Stats
     fun getStats(): Flow<VowStats> = context.dataStore.data.map { prefs ->
         val json = prefs[KEY_STATS]
-        if (json != null) parseStats(json) else VowStats()
+        if (json != null) safe(VowStats()) { parseStats(json) } else VowStats()
     }
 
     suspend fun saveStats(stats: VowStats) {
@@ -335,6 +382,7 @@ class VowPreferences(private val context: Context) {
         put("usedTodayMinutes", y.usedTodayMinutes)
         put("decayStartedAt", y.decayStartedAt)
         put("floorMinutes", y.floorMinutes)
+        put("usedDate", y.usedDate)
     }.toString()
 
     private fun parseYouTubeAllowance(json: String): YouTubeAllowance {
@@ -344,7 +392,8 @@ class VowPreferences(private val context: Context) {
             currentAllowanceMinutes = o.getInt("currentAllowanceMinutes"),
             usedTodayMinutes = o.getInt("usedTodayMinutes"),
             decayStartedAt = o.getLong("decayStartedAt"),
-            floorMinutes = o.getInt("floorMinutes")
+            floorMinutes = o.getInt("floorMinutes"),
+            usedDate = o.optString("usedDate", "")
         )
     }
 
@@ -353,6 +402,7 @@ class VowPreferences(private val context: Context) {
         put("baselineDailyMinutes", s.baselineDailyMinutes)
         put("measurementStartDate", s.measurementStartDate)
         put("daysTracked", s.daysTracked)
+        put("lastProcessedDate", s.lastProcessedDate)
     }.toString()
 
     private fun parseStats(json: String): VowStats {
@@ -361,7 +411,8 @@ class VowPreferences(private val context: Context) {
             totalReclaimedMinutes = o.getLong("totalReclaimedMinutes"),
             baselineDailyMinutes = o.getLong("baselineDailyMinutes"),
             measurementStartDate = o.getString("measurementStartDate"),
-            daysTracked = o.getInt("daysTracked")
+            daysTracked = o.getInt("daysTracked"),
+            lastProcessedDate = o.optString("lastProcessedDate", "")
         )
     }
 }

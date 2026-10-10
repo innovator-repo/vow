@@ -2,6 +2,8 @@ package com.vow.app.ui.screens.home
 
 import android.Manifest
 import android.app.AppOpsManager
+import android.app.admin.DevicePolicyManager
+import com.vow.app.service.admin.VowDeviceAdminReceiver
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
@@ -36,6 +38,10 @@ fun SetupChecklistCard() {
     var usage by remember { mutableStateOf(hasUsageAccess(context)) }
     var accessibility by remember { mutableStateOf(isAccessibilityEnabled(context)) }
     var vpn by remember { mutableStateOf(VpnService.prepare(context) == null) }
+    var admin by remember { mutableStateOf(isAdminActive(context)) }
+    val prefs = remember { com.vow.app.data.prefs.VowPreferences(context) }
+    val restrictions by prefs.getRestrictions().collectAsState(initial = emptyList())
+    val wantsAdmin = restrictions.any { it.type == com.vow.app.data.model.RestrictionType.UNINSTALL && it.enabled }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -44,6 +50,7 @@ fun SetupChecklistCard() {
                 usage = hasUsageAccess(context)
                 accessibility = isAccessibilityEnabled(context)
                 vpn = VpnService.prepare(context) == null
+                admin = isAdminActive(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -76,11 +83,16 @@ fun SetupChecklistCard() {
                 Disclosure.USAGE -> context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
                 Disclosure.ACCESSIBILITY -> context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                 Disclosure.VPN -> VpnService.prepare(context)?.let { vpnLauncher.launch(it) }
+                Disclosure.ADMIN -> context.startActivity(
+                    Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+                        .putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, VowDeviceAdminReceiver.getComponentName(context))
+                        .putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, Disclosure.ADMIN.body)
+                )
             }
         })
     }
 
-    if (usage && accessibility && vpn) return
+    if (usage && accessibility && vpn && (admin || !wantsAdmin)) return
 
     com.vow.app.ui.components.VowCard(
         modifier = Modifier.padding(bottom = 16.dp),
@@ -106,6 +118,11 @@ fun SetupChecklistCard() {
             ChecklistRow("Content filter", "Blocks adult sites on this profile's traffic", vpn) {
                 disclosure = Disclosure.VPN
             }
+            if (wantsAdmin) {
+                ChecklistRow("Uninstall protection", "Stops Vow being removed on impulse", admin) {
+                    disclosure = Disclosure.ADMIN
+                }
+            }
         }
     }
 }
@@ -125,6 +142,10 @@ private fun ChecklistRow(title: String, subtitle: String, done: Boolean, onGrant
         }
     }
 }
+
+private fun isAdminActive(context: Context): Boolean =
+    context.getSystemService(DevicePolicyManager::class.java)
+        .isAdminActive(VowDeviceAdminReceiver.getComponentName(context))
 
 private fun hasUsageAccess(context: Context): Boolean {
     val appOps = context.getSystemService(AppOpsManager::class.java)
@@ -165,6 +186,12 @@ private enum class Disclosure(val title: String, val body: String, val step: Str
             "It runs entirely on your phone. Your browsing is not sent to Vow or anyone else, and " +
             "work-profile traffic is not affected.",
         "Android will ask you to confirm the connection request."
+    ),
+    ADMIN(
+        "Turn on uninstall protection",
+        "Making Vow a device admin means it can't be uninstalled until you switch this off again. " +
+            "Vow uses no admin powers: it can't wipe, lock or see anything on your phone.",
+        "On the next screen, tap Activate."
     )
 }
 

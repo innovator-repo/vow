@@ -91,7 +91,8 @@ data class YouTubeAllowance(
     val currentAllowanceMinutes: Int = 120,
     val usedTodayMinutes: Int = 0,
     val decayStartedAt: Long = System.currentTimeMillis(),
-    val floorMinutes: Int = 30
+    val floorMinutes: Int = 30,
+    val usedDate: String = ""
 )
 
 data class NightModeConfig(
@@ -116,7 +117,24 @@ data class VowStats(
     val totalReclaimedMinutes: Long = 0,
     val baselineDailyMinutes: Long = 0,
     val measurementStartDate: String = "",
-    val daysTracked: Int = 0
+    val daysTracked: Int = 0,
+    val lastProcessedDate: String = ""
+)
+
+enum class ChangeKind { NIGHT_CONFIG, APP_RULE, KEYWORD }
+
+/** A loosening edit waiting out its delay. base/new are JSON snapshots (null = absent). */
+data class PendingChange(
+    val id: String = UUID.randomUUID().toString(),
+    val kind: ChangeKind,
+    val key: String,
+    val description: String,
+    val baseJson: String?,
+    val newJson: String?,
+    val requestedAt: Long = System.currentTimeMillis(),
+    val maturesAt: Long,
+    val applied: Boolean = false,
+    val cancelled: Boolean = false
 )
 
 data class PasswordConfig(
