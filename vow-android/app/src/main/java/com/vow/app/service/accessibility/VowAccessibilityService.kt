@@ -7,6 +7,9 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.vow.app.data.model.RestrictionType
 import com.vow.app.data.prefs.VowPreferences
+import com.vow.app.data.repository.VowRepository
+import com.vow.app.service.blocking.BlockPolicy
+import com.vow.app.ui.block.BlockActivity
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 
@@ -15,6 +18,9 @@ class VowAccessibilityService : AccessibilityService() {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private lateinit var prefs: VowPreferences
     private lateinit var profileGuard: ProfileGuard
+    private lateinit var blockPolicy: BlockPolicy
+    @Volatile private var currentApp: String? = null
+    private var lastBlock: Pair<String, Long>? = null
 
     // Package names for short video detection
     private val shortVideoApps = mapOf(
@@ -45,6 +51,7 @@ class VowAccessibilityService : AccessibilityService() {
         super.onCreate()
         prefs = VowPreferences(this)
         profileGuard = ProfileGuard(this)
+        blockPolicy = BlockPolicy(this, VowRepository(this))
     }
 
     override fun onServiceConnected() {
@@ -58,6 +65,15 @@ class VowAccessibilityService : AccessibilityService() {
             notificationTimeout = 300
         }
         serviceInfo = info
+
+        scope.launch {
+            while (isActive) {
+                delay(20_000)
+                currentApp?.let { pkg ->
+                    try { enforceAppRules(pkg) } catch (_: Exception) {}
+                }
+            }
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -66,6 +82,13 @@ class VowAccessibilityService : AccessibilityService() {
         scope.launch {
             try {
                 val packageName = event.packageName?.toString() ?: return@launch
+                if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+                    packageName != this@VowAccessibilityService.packageName &&
+                    packageName != "com.android.systemui"
+                ) {
+                    currentApp = packageName
+                    enforceAppRules(packageName)
+                }
                 if (packageName !in shortVideoApps && packageName !in browserPackages &&
                     packageName != settingsPackage) return@launch
                 if (!profileGuard.isPersonalForeground(packageName)) return@launch
@@ -202,6 +225,17 @@ class VowAccessibilityService : AccessibilityService() {
             nodes.forEach { it.recycle() }
         }
         root.recycle()
+    }
+
+    private suspend fun enforceAppRules(packageName: String) {
+        if (!profileGuard.isPersonalForeground(packageName)) return
+        val reason = withContext(Dispatchers.Default) { blockPolicy.check(packageName) } ?: return
+        val now = System.currentTimeMillis()
+        val last = lastBlock
+        if (last != null && last.first == packageName && now - last.second < 1500) return
+        lastBlock = packageName to now
+        performGlobalAction(GLOBAL_ACTION_HOME)
+        BlockActivity.show(this, reason.title, reason.message)
     }
 
     // Only guard Vow's own app-info / admin pages, never other apps' (including work apps).

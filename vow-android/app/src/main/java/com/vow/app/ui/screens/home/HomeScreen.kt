@@ -95,6 +95,7 @@ fun HomeScreen(
                 }
             }
 
+            CrashReportCard()
             StaggeredItem(0) { SetupChecklistCard() }
 
             StaggeredItem(1) {

@@ -25,6 +25,7 @@ class UsageMonitorService : Service() {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private lateinit var repo: VowRepository
     private lateinit var prefs: VowPreferences
+    private var monitoring = false
 
     companion object {
         const val CHANNEL_ID = "vow_usage_channel"
@@ -39,8 +40,20 @@ class UsageMonitorService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NOTIFICATION_ID, buildNotification("Monitoring usage"))
-        startMonitoring()
+        try {
+            androidx.core.app.ServiceCompat.startForeground(
+                this, NOTIFICATION_ID, buildNotification("Monitoring usage"),
+                if (android.os.Build.VERSION.SDK_INT >= 34)
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0
+            )
+        } catch (e: Exception) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        if (!monitoring) {
+            monitoring = true
+            startMonitoring()
+        }
         return START_STICKY
     }
 
@@ -89,20 +102,9 @@ class UsageMonitorService : Service() {
         val ytRestriction = restrictions.find { it.type == RestrictionType.YOUTUBE_LIMIT && it.enabled }
             ?: return
 
-        val usm = getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager ?: return
-
-        val cal = Calendar.getInstance()
-        val endTime = cal.timeInMillis
-        cal.set(Calendar.HOUR_OF_DAY, 0)
-        cal.set(Calendar.MINUTE, 0)
-        cal.set(Calendar.SECOND, 0)
-        val startTime = cal.timeInMillis
-
-        val stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startTime, endTime)
-        val ytUsage = stats.find { it.packageName == "com.google.android.youtube" }
-
-        if (ytUsage != null) {
-            val usedMinutes = (ytUsage.totalTimeInForeground / 60_000).toInt()
+        val usedMinutes = com.vow.app.service.blocking.UsageTracker(this)
+            .todayForegroundMinutes()["com.google.android.youtube"]
+        if (usedMinutes != null) {
             val allowance = repo.computeYouTubeAllowance()
 
             val updated = allowance.copy(usedTodayMinutes = usedMinutes)

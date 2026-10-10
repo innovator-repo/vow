@@ -77,7 +77,7 @@ fun SetupChecklistCard() {
             ChecklistRow("Usage access", "Tracks time and tells personal apps apart from work apps", usage) {
                 context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
             }
-            ChecklistRow("Accessibility", "Leaves short-video feeds and blocked pages", accessibility) {
+            ChecklistRow("Accessibility", "Blocks apps past their limit, Night Mode, Shorts and Reels", accessibility) {
                 context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
             }
             ChecklistRow("Content filter", "Blocks adult sites on this profile's traffic", vpn) {

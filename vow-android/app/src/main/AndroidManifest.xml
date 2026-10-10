@@ -29,6 +29,10 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
     </queries>
 
     <application
@@ -50,6 +54,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".ui.block.BlockActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.vow.app.block"
+            android:theme="@style/Theme.Vow" />
 
         <!-- Device Admin Receiver -->
         <receiver
@@ -73,6 +85,9 @@
             <intent-filter>
                 <action android:name="android.net.VpnService" />
             </intent-filter>
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="On-device content filter and screen-time limits the user set for themselves" />
         </service>
 
         <!-- Accessibility Service -->
@@ -92,7 +107,11 @@
         <service
             android:name=".service.usage.UsageMonitorService"
             android:exported="false"
-            android:foregroundServiceType="specialUse" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="On-device content filter and screen-time limits the user set for themselves" />
+        </service>
 
         <!-- Boot receiver -->
         <receiver
