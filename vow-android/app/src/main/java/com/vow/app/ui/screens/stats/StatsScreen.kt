@@ -30,8 +30,6 @@ fun StatsScreen(
         initial = com.vow.app.data.model.YouTubeAllowance()
     )
 
-    val hours = stats.totalReclaimedMinutes / 60
-    val mins = stats.totalReclaimedMinutes % 60
     val activeCount = restrictions.count { it.enabled }
     val sealedCount = restrictions.count { it.sealState == SealState.SEALED }
 
@@ -58,10 +56,16 @@ fun StatsScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Big number
+            val shown by androidx.compose.animation.core.animateIntAsState(
+                stats.totalReclaimedMinutes.toInt(),
+                androidx.compose.animation.core.tween(1400, easing = androidx.compose.animation.core.EaseOutCubic),
+                label = "reclaimed"
+            )
             Text(
-                if (hours > 0) "${hours}h ${mins}m" else "${mins}m",
-                style = MaterialTheme.typography.headlineLarge,
-                color = VowGreen
+                if (shown >= 60) "${shown / 60}h ${shown % 60}m" else "${shown}m",
+                style = MaterialTheme.typography.displayMedium.copy(
+                    brush = androidx.compose.ui.graphics.Brush.linearGradient(listOf(VowGreen, com.vow.app.ui.theme.VowTeal))
+                )
             )
             Text(
                 "total time reclaimed",

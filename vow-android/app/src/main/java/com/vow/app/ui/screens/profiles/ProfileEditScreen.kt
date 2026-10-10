@@ -108,7 +108,7 @@ fun ProfileEditScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Block short videos", modifier = Modifier.weight(1f))
-                Switch(checked = blockShortVideos, onCheckedChange = { blockShortVideos = it })
+                com.vow.app.ui.components.HapticSwitch(checked = blockShortVideos, onCheckedChange = { blockShortVideos = it })
             }
 
             Row(
@@ -116,7 +116,7 @@ fun ProfileEditScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Block adult sites", modifier = Modifier.weight(1f))
-                Switch(checked = blockAdultSites, onCheckedChange = { blockAdultSites = it })
+                com.vow.app.ui.components.HapticSwitch(checked = blockAdultSites, onCheckedChange = { blockAdultSites = it })
             }
 
             Spacer(modifier = Modifier.height(16.dp))

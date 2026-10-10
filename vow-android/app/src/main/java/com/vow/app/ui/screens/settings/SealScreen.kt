@@ -12,6 +12,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vow.app.data.model.SealState
 import com.vow.app.data.repository.VowRepository
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import com.vow.app.ui.components.HoldToConfirmButton
+import com.vow.app.ui.theme.SealBrush
 import com.vow.app.ui.theme.VowSeal
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -27,7 +34,6 @@ fun SealScreen(
     val restriction = restrictions.find { it.id == restrictionId }
     val scope = rememberCoroutineScope()
     var confirmText by remember { mutableStateOf("") }
-    var showConfirmDialog by remember { mutableStateOf(false) }
     val confirmSentence = "I seal this forever"
 
     Scaffold(
@@ -49,12 +55,7 @@ fun SealScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                Icons.Default.Lock,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = VowSeal
-            )
+            SealOrb()
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -87,14 +88,18 @@ fun SealScreen(
                     )
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    Button(
-                        onClick = { showConfirmDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = VowSeal)
-                    ) {
-                        Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Begin sealing process")
-                    }
+                    HoldToConfirmButton(
+                        text = "Hold to begin sealing",
+                        icon = Icons.Default.Lock,
+                        brush = SealBrush,
+                        onConfirmed = { scope.launch { repo.requestSeal(restrictionId) } }
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        "Nothing is permanent yet \u2014 you confirm again in 24 hours.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
                 SealState.PENDING_SEAL -> {
@@ -138,24 +143,25 @@ fun SealScreen(
                             singleLine = true
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = {
+                        HoldToConfirmButton(
+                            text = "Hold to seal forever",
+                            icon = Icons.Default.Lock,
+                            brush = SealBrush,
+                            holdMillis = 3000,
+                            enabled = confirmText.trim().equals(confirmSentence, ignoreCase = true),
+                            onConfirmed = {
                                 scope.launch {
                                     repo.confirmSeal(restrictionId)
                                     onBack()
                                 }
-                            },
-                            enabled = confirmText.equals(confirmSentence, ignoreCase = true),
-                            colors = ButtonDefaults.buttonColors(containerColor = VowSeal)
-                        ) {
-                            Text("Confirm seal")
-                        }
+                            }
+                        )
                     }
                 }
 
                 SealState.SEALED -> {
                     Text(
-                        "🔒 Sealed",
+                        "Sealed",
                         style = MaterialTheme.typography.headlineLarge,
                         color = VowSeal
                     )
@@ -169,33 +175,25 @@ fun SealScreen(
             }
         }
     }
+}
 
-    if (showConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { showConfirmDialog = false },
-            title = { Text("Start sealing?") },
-            text = {
-                Text("After 24 hours you will be asked to type a confirmation sentence. " +
-                    "Once confirmed, this protection becomes permanent and cannot be undone.")
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        scope.launch {
-                            repo.requestSeal(restrictionId)
-                            showConfirmDialog = false
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = VowSeal)
-                ) {
-                    Text("Start sealing")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showConfirmDialog = false }) {
-                    Text("Cancel")
-                }
-            }
+@Composable
+private fun SealOrb() {
+    val pulse = rememberInfiniteTransition(label = "sealPulse")
+    val glow by pulse.animateFloat(
+        0.18f, 0.38f, infiniteRepeatable(tween(2200, easing = EaseInOutSine), RepeatMode.Reverse), label = "glow"
+    )
+    Box(Modifier.size(140.dp), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.radialGradient(listOf(VowSeal.copy(alpha = glow), Color.Transparent)), CircleShape
+            )
         )
+        Box(
+            Modifier.size(76.dp).background(SealBrush, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.Lock, contentDescription = null, tint = Color.White, modifier = Modifier.size(34.dp))
+        }
     }
 }

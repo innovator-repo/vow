@@ -59,7 +59,13 @@ fun SetupChecklistCard() {
 
     if (usage && accessibility && vpn) return
 
-    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+    com.vow.app.ui.components.VowCard(
+        modifier = Modifier.padding(bottom = 16.dp),
+        containerColor = com.vow.app.ui.theme.VowAmber.copy(alpha = 0.08f),
+        borderBrush = androidx.compose.ui.graphics.Brush.linearGradient(
+            listOf(com.vow.app.ui.theme.VowAmber.copy(alpha = 0.45f), com.vow.app.ui.theme.VowAmber.copy(alpha = 0.08f))
+        )
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Finish setup", style = MaterialTheme.typography.titleMedium)
             Text(
@@ -91,7 +97,8 @@ private fun ChecklistRow(title: String, subtitle: String, done: Boolean, onGrant
         if (done) {
             Icon(Icons.Default.CheckCircle, contentDescription = "Done", tint = VowGreen)
         } else {
-            FilledTonalButton(onClick = onGrant) { Text("Allow") }
+            val haptics = com.vow.app.ui.components.rememberHaptics()
+            FilledTonalButton(onClick = { haptics.click(); onGrant() }) { Text("Allow") }
         }
     }
 }

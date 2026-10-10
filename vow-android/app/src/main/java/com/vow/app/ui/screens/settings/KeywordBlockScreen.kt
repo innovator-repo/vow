@@ -109,7 +109,7 @@ fun KeywordBlockScreen(
                                     modifier = Modifier.size(18.dp)
                                 )
                             } else {
-                                Switch(
+                                com.vow.app.ui.components.HapticSwitch(
                                     checked = keyword.enabled,
                                     onCheckedChange = { enabled ->
                                         scope.launch {

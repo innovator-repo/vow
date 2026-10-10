@@ -1,37 +1,34 @@
 package com.vow.app.ui.theme
 
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// Primary - calm indigo that conveys trust and commitment
-val VowIndigo = Color(0xFF4A5568)
-val VowIndigoLight = Color(0xFF718096)
-val VowIndigoDark = Color(0xFF2D3748)
+// Dark ("ink") surfaces
+val Ink = Color(0xFF0B0F14)
+val InkSurface = Color(0xFF131922)
+val InkSurfaceHigh = Color(0xFF1A2230)
+val InkLine = Color(0xFF263142)
+val InkText = Color(0xFFE8EEF6)
+val InkTextMuted = Color(0xFF8FA0B5)
 
-// Accent - warm amber for important actions
-val VowAmber = Color(0xFFD69E2E)
-val VowAmberLight = Color(0xFFF6E05E)
-val VowAmberDark = Color(0xFFB7791F)
+// Light surfaces
+val Paper = Color(0xFFF5F7FB)
+val PaperSurface = Color(0xFFFFFFFF)
+val PaperSurfaceHigh = Color(0xFFEDF1F7)
+val PaperLine = Color(0xFFD5DEEA)
+val PaperText = Color(0xFF0F172A)
+val PaperTextMuted = Color(0xFF5B6B80)
 
-// Seal color - deep, ceremonial purple
-val VowSeal = Color(0xFF6B46C1)
-val VowSealLight = Color(0xFF9F7AEA)
+// Accents
+val VowTeal = Color(0xFF2DD4BF)
+val VowTealDeep = Color(0xFF0D9488)
+val VowSky = Color(0xFF38BDF8)
+val VowSeal = Color(0xFFA78BFA)
+val VowSealDeep = Color(0xFF7C3AED)
+val VowAmber = Color(0xFFFBBF24)
+val VowGreen = Color(0xFF4ADE80)
+val VowRose = Color(0xFFFB7185)
 
-// Background
-val VowBgLight = Color(0xFFF7FAFC)
-val VowBgDark = Color(0xFF1A202C)
-val VowSurfaceLight = Color(0xFFFFFFFF)
-val VowSurfaceDark = Color(0xFF2D3748)
-
-// Text
-val VowTextPrimary = Color(0xFF1A202C)
-val VowTextSecondary = Color(0xFF718096)
-val VowTextOnDark = Color(0xFFF7FAFC)
-
-// Status
-val VowGreen = Color(0xFF38A169)
-val VowRed = Color(0xFFE53E3E)
-val VowOrange = Color(0xFFDD6B20)
-
-// Night mode special
-val VowNightOverlay = Color(0xCC1A202C) // semi-transparent dark
-val VowNightSurface = Color(0xFF171923)
+val AuroraColors = listOf(VowTeal, VowSky, VowSeal)
+val AuroraBrush = Brush.linearGradient(AuroraColors)
+val SealBrush = Brush.linearGradient(listOf(VowSealDeep, VowSeal))

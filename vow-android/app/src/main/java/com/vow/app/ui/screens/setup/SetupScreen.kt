@@ -1,7 +1,14 @@
 package com.vow.app.ui.screens.setup
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import com.vow.app.ui.components.*
+import com.vow.app.ui.theme.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -49,14 +56,17 @@ fun SetupScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Progress
-            LinearProgressIndicator(
-                progress = (currentStep + 1f) / steps.size,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 32.dp),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+            val stepProgress by animateFloatAsState(
+                (currentStep + 1f) / steps.size,
+                spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessLow),
+                label = "stepProgress"
             )
+            Box(
+                Modifier.fillMaxWidth().padding(bottom = 32.dp).height(6.dp)
+                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), CircleShape)
+            ) {
+                Box(Modifier.fillMaxWidth(stepProgress).fillMaxHeight().background(AuroraBrush, CircleShape))
+            }
 
             AnimatedContent(targetState = currentStep, label = "setup_step") { step ->
                 Column(
@@ -90,14 +100,13 @@ fun SetupScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 if (currentStep > 0) {
-                    OutlinedButton(onClick = { currentStep-- }) {
-                        Text("Back")
-                    }
+                    QuietButton("Back", onClick = { currentStep-- })
                 } else {
                     Spacer(modifier = Modifier.width(1.dp))
                 }
 
-                Button(
+                GradientButton(
+                    text = if (currentStep < steps.size - 1) "Continue" else "Start Vow",
                     onClick = {
                         if (currentStep < steps.size - 1) {
                             currentStep++
@@ -128,9 +137,7 @@ fun SetupScreen(
                         2 -> ifThenPlan.length >= 10
                         else -> true
                     }
-                ) {
-                    Text(if (currentStep < steps.size - 1) "Continue" else "Start Vow")
-                }
+                )
             }
         }
     }
@@ -139,16 +146,20 @@ fun SetupScreen(
 @Composable
 private fun WelcomeStep() {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(
-            Icons.Default.Shield,
-            contentDescription = null,
-            modifier = Modifier.size(80.dp),
-            tint = MaterialTheme.colorScheme.primary
+        val pulse = rememberInfiniteTransition(label = "welcome")
+        val glow by pulse.animateFloat(
+            0.15f, 0.35f, infiniteRepeatable(tween(2400, easing = EaseInOutSine), RepeatMode.Reverse), label = "glow"
         )
+        Box(Modifier.size(150.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(VowTeal.copy(alpha = glow), Color.Transparent)), CircleShape))
+            Box(Modifier.size(84.dp).background(AuroraBrush, CircleShape), contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.Shield, contentDescription = null, tint = Ink, modifier = Modifier.size(40.dp))
+            }
+        }
         Spacer(modifier = Modifier.height(24.dp))
         Text(
             "Vow",
-            style = MaterialTheme.typography.headlineLarge
+            style = MaterialTheme.typography.displayMedium
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -270,16 +281,11 @@ private fun ProtectionToggle(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (checked)
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-            else
-                MaterialTheme.colorScheme.surface
-        )
+    VowCard(
+        modifier = Modifier.padding(vertical = 5.dp),
+        onClick = { onCheckedChange(!checked) },
+        containerColor = if (checked) VowTeal.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surfaceVariant,
+        borderBrush = if (checked) Brush.linearGradient(listOf(VowTeal.copy(alpha = 0.55f), VowSky.copy(alpha = 0.15f))) else null
     ) {
         Row(
             modifier = Modifier
@@ -295,7 +301,8 @@ private fun ProtectionToggle(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
+            Spacer(Modifier.width(12.dp))
+            HapticSwitch(checked = checked, onCheckedChange = onCheckedChange)
         }
     }
 }

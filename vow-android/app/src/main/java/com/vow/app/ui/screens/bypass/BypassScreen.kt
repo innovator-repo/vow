@@ -14,6 +14,11 @@ import androidx.compose.ui.unit.dp
 import com.vow.app.data.model.SealState
 import com.vow.app.data.repository.VowRepository
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Brush
+import com.vow.app.ui.components.*
+import com.vow.app.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -35,7 +40,8 @@ fun BypassScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Loosen Protection") },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                title = { Text("Loosen protection") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
@@ -50,7 +56,6 @@ fun BypassScreen(
                 .padding(padding)
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
         ) {
             if (restriction == null) {
                 Text("Restriction not found")
@@ -62,7 +67,7 @@ fun BypassScreen(
                     Icons.Default.Lock,
                     contentDescription = null,
                     modifier = Modifier.size(64.dp),
-                    tint = com.vow.app.ui.theme.VowSeal
+                    tint = VowSeal
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
@@ -77,93 +82,82 @@ fun BypassScreen(
                 return@Scaffold
             }
 
-            // Show the user's own words
-            if (restriction.reason.isNotEmpty()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Text(
-                            "You wrote this on ${dateFormat.format(Date(restriction.createdAt))}:",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "\"${restriction.reason}\"",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontStyle = FontStyle.Italic
-                        )
+            StaggeredItem(0) {
+                if (restriction.reason.isNotEmpty()) {
+                    VowCard {
+                        Row(Modifier.height(IntrinsicSize.Min).padding(20.dp)) {
+                            Box(Modifier.width(3.dp).fillMaxHeight().background(AuroraBrush, CircleShape))
+                            Spacer(Modifier.width(16.dp))
+                            Column {
+                                Text(
+                                    "You wrote this on ${dateFormat.format(Date(restriction.createdAt))}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "\u201C${restriction.reason}\u201D",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontStyle = FontStyle.Italic
+                                )
+                            }
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Show if-then plan
-            if (restriction.ifThenPlan.isNotEmpty()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Text(
-                            "Your plan:",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "If I feel the urge → ${restriction.ifThenPlan}",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+            StaggeredItem(1) {
+                if (restriction.ifThenPlan.isNotEmpty()) {
+                    VowCard(
+                        containerColor = VowAmber.copy(alpha = 0.10f),
+                        borderBrush = Brush.linearGradient(listOf(VowAmber.copy(alpha = 0.45f), VowAmber.copy(alpha = 0.1f)))
+                    ) {
+                        Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                            IconBubble(Icons.Default.Lightbulb, VowAmber, size = 40.dp)
+                            Spacer(Modifier.width(14.dp))
+                            Column {
+                                Text("YOUR PLAN", style = MaterialTheme.typography.labelSmall, color = VowAmber)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(restriction.ifThenPlan, style = MaterialTheme.typography.bodyLarge)
+                            }
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Show what's at stake
-            if (stats.totalReclaimedMinutes > 0) {
-                Text(
-                    "You've reclaimed ${stats.totalReclaimedMinutes / 60}h ${stats.totalReclaimedMinutes % 60}m so far.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    "This starts a 24-hour cooling-off period.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
+            StaggeredItem(2) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    if (stats.totalReclaimedMinutes > 0) {
+                        Pill("${stats.totalReclaimedMinutes / 60}h ${stats.totalReclaimedMinutes % 60}m reclaimed so far", VowGreen)
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                    Text(
+                        "Loosening needs a 90-second breathing exercise, then a 24-hour cooling-off. " +
+                            "No shortcuts \u2014 this gives the urge time to pass.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.weight(1f))
 
-            // Breathing exercise (friction)
-            Text(
-                "To proceed, complete a 90-second paced breathing exercise.\n" +
-                    "No shortcuts. This gives the urge time to pass.",
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(onClick = onStartBreathing) {
-                Text("Begin breathing exercise")
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            TextButton(onClick = onBack) {
-                Text("Never mind, keep it active")
+            StaggeredItem(3) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    GradientButton(
+                        "Keep it active",
+                        onClick = onBack,
+                        icon = Icons.Default.Shield,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    QuietButton("Begin breathing exercise", onClick = onStartBreathing)
+                }
             }
         }
     }

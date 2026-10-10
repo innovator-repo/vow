@@ -187,7 +187,7 @@ private fun ProfileCard(
                         )
                     }
                 }
-                Switch(checked = profile.isActive, onCheckedChange = onToggle)
+                com.vow.app.ui.components.HapticSwitch(checked = profile.isActive, onCheckedChange = onToggle)
             }
         }
     }

@@ -1,5 +1,13 @@
 package com.vow.app.ui.navigation
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -56,7 +64,15 @@ fun VowNavHost(
     NavHost(
         navController = navController,
         startDestination = startDestination,
-        modifier = modifier
+        modifier = modifier,
+        enterTransition = {
+            slideInHorizontally(tween(320, easing = FastOutSlowInEasing)) { it / 5 } + fadeIn(tween(260))
+        },
+        exitTransition = { scaleOut(tween(320), targetScale = 0.96f) + fadeOut(tween(200)) },
+        popEnterTransition = { scaleIn(tween(320), initialScale = 0.96f) + fadeIn(tween(260)) },
+        popExitTransition = {
+            slideOutHorizontally(tween(280, easing = FastOutSlowInEasing)) { it / 5 } + fadeOut(tween(200))
+        }
     ) {
         composable(Screen.Setup.route) {
             SetupScreen(

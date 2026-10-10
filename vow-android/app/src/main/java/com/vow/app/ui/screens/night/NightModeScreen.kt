@@ -83,7 +83,7 @@ fun NightModeScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(
+                    com.vow.app.ui.components.HapticSwitch(
                         checked = config.enabled,
                         onCheckedChange = {
                             scope.launch {

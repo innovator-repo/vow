@@ -15,7 +15,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vow.app.data.model.*
 import com.vow.app.data.repository.VowRepository
-import com.vow.app.ui.theme.VowSeal
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.font.FontWeight
+import com.vow.app.ui.components.*
+import com.vow.app.ui.theme.*
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,6 +38,7 @@ fun RestrictionsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                 title = { Text("Restrictions") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -56,8 +62,8 @@ fun RestrictionsScreen(
                 modifier = Modifier.padding(vertical = 8.dp)
             )
 
-            for (restriction in restrictions) {
-                RestrictionCard(
+            restrictions.forEachIndexed { index, restriction ->
+                StaggeredItem(index) { RestrictionCard(
                     restriction = restriction,
                     onToggle = { enabled ->
                         scope.launch {
@@ -71,7 +77,7 @@ fun RestrictionsScreen(
                     },
                     onSeal = { onNavigateToSeal(restriction.id) },
                     onKeywords = if (restriction.type == RestrictionType.KEYWORD_BLOCK) onNavigateToKeywords else null
-                )
+                ) }
             }
 
             // Add new restriction
@@ -92,77 +98,55 @@ private fun RestrictionCard(
     val isSealed = restriction.sealState == SealState.SEALED
     val isPendingSeal = restriction.sealState == SealState.PENDING_SEAL
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = when {
-                isSealed -> VowSeal.copy(alpha = 0.08f)
-                restriction.enabled -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
-                else -> MaterialTheme.colorScheme.surface
-            }
-        )
+    val haptics = rememberHaptics()
+    val accent = if (isSealed) VowSeal else VowTeal
+    VowCard(
+        modifier = Modifier.padding(vertical = 5.dp),
+        containerColor = when {
+            isSealed -> VowSeal.copy(alpha = 0.10f)
+            restriction.enabled -> VowTeal.copy(alpha = 0.06f)
+            else -> MaterialTheme.colorScheme.surfaceVariant
+        },
+        borderBrush = if (isSealed) Brush.linearGradient(listOf(VowSeal.copy(alpha = 0.7f), VowSealDeep.copy(alpha = 0.2f))) else null
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(16.dp).animateContentSize()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                IconBubble(restrictionIcon(restriction.type), if (restriction.enabled || isSealed) accent else MaterialTheme.colorScheme.onSurfaceVariant, size = 40.dp)
+                Spacer(modifier = Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            restrictionLabel(restriction.type),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        if (isSealed) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Icon(
-                                Icons.Default.Lock,
-                                contentDescription = "Sealed",
-                                modifier = Modifier.size(16.dp),
-                                tint = VowSeal
-                            )
-                            Text(
-                                " Sealed",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = VowSeal
-                            )
-                        }
-                        if (isPendingSeal) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                "⏳ Sealing in progress",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.tertiary
-                            )
-                        }
-                    }
+                    Text(restrictionLabel(restriction.type), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text(
                         restrictionDescription(restriction.type),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-
-                if (!isSealed) {
-                    Switch(
-                        checked = restriction.enabled,
-                        onCheckedChange = onToggle
-                    )
+                if (isSealed) {
+                    Icon(Icons.Default.Lock, contentDescription = "Sealed", tint = VowSeal, modifier = Modifier.size(20.dp))
+                } else {
+                    HapticSwitch(checked = restriction.enabled, onCheckedChange = onToggle)
                 }
             }
 
-            if (restriction.enabled && !isSealed) {
-                Spacer(modifier = Modifier.height(8.dp))
+            if (isSealed || isPendingSeal) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Pill(if (isSealed) "Sealed forever" else "Sealing \u2014 confirm in 24h", if (isSealed) VowSeal else VowAmber)
+            }
+
+            if (restriction.enabled && !isSealed && !isPendingSeal) {
+                Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
-                        onClick = onSeal,
+                        onClick = { haptics.click(); onSeal() },
+                        border = BorderStroke(1.dp, VowSeal.copy(alpha = 0.5f)),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = VowSeal)
                     ) {
                         Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text("Seal forever")
                     }
                     if (onKeywords != null) {
-                        OutlinedButton(onClick = onKeywords) {
+                        OutlinedButton(onClick = { haptics.click(); onKeywords() }) {
                             Text("Edit keywords")
                         }
                     }
@@ -180,30 +164,41 @@ private fun AddRestrictionSection(repo: VowRepository, existing: List<Restrictio
 
     if (missingTypes.isEmpty()) return
 
-    Text("Add protection", style = MaterialTheme.typography.titleMedium)
-    Spacer(modifier = Modifier.height(8.dp))
+    val haptics = rememberHaptics()
+    SectionLabel("Add protection")
 
     for (type in missingTypes) {
-        OutlinedCard(
+        VowCard(
             onClick = {
-                scope.launch {
-                    repo.enableRestriction(type, "", "")
-                }
+                haptics.confirm()
+                scope.launch { repo.enableRestriction(type, "", "") }
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 2.dp)
+            containerColor = MaterialTheme.colorScheme.background,
+            modifier = Modifier.padding(vertical = 4.dp)
         ) {
             Row(
-                modifier = Modifier.padding(12.dp),
+                modifier = Modifier.padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                IconBubble(Icons.Default.Add, VowTeal, size = 32.dp)
                 Spacer(modifier = Modifier.width(12.dp))
-                Text(restrictionLabel(type), style = MaterialTheme.typography.bodyMedium)
+                Text(restrictionLabel(type), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                Text("Add", style = MaterialTheme.typography.labelLarge, color = VowTeal)
             }
         }
     }
+}
+
+private fun restrictionIcon(type: RestrictionType) = when (type) {
+    RestrictionType.DNS -> Icons.Default.Dns
+    RestrictionType.DATE_TIME -> Icons.Default.Schedule
+    RestrictionType.UNINSTALL -> Icons.Default.DeleteForever
+    RestrictionType.SHORT_VIDEO -> Icons.Default.VideoLibrary
+    RestrictionType.ADULT_SITES -> Icons.Default.Shield
+    RestrictionType.KEYWORD_BLOCK -> Icons.Default.Abc
+    RestrictionType.NIGHT_MODE -> Icons.Default.Bedtime
+    RestrictionType.APP_LIMIT -> Icons.Default.HourglassBottom
+    RestrictionType.YOUTUBE_LIMIT -> Icons.Default.PlayCircle
 }
 
 private fun restrictionLabel(type: RestrictionType): String = when (type) {
