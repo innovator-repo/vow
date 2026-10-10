@@ -1,6 +1,10 @@
 package com.vow.app.ui.screens.home
 
+import android.Manifest
 import android.app.AppOpsManager
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -57,6 +61,25 @@ fun SetupChecklistCard() {
         vpn = VpnService.prepare(context) == null
     }
 
+    val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    var disclosure by remember { mutableStateOf<Disclosure?>(null) }
+    disclosure?.let { d ->
+        DisclosureDialog(d, onDismiss = { disclosure = null }, onAgree = {
+            disclosure = null
+            when (d) {
+                Disclosure.USAGE -> context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                Disclosure.ACCESSIBILITY -> context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                Disclosure.VPN -> VpnService.prepare(context)?.let { vpnLauncher.launch(it) }
+            }
+        })
+    }
+
     if (usage && accessibility && vpn) return
 
     com.vow.app.ui.components.VowCard(
@@ -75,13 +98,13 @@ fun SetupChecklistCard() {
             )
             Spacer(Modifier.height(8.dp))
             ChecklistRow("Usage access", "Tracks time and tells personal apps apart from work apps", usage) {
-                context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                disclosure = Disclosure.USAGE
             }
             ChecklistRow("Accessibility", "Blocks apps past their limit, Night Mode, Shorts and Reels", accessibility) {
-                context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                disclosure = Disclosure.ACCESSIBILITY
             }
             ChecklistRow("Content filter", "Blocks adult sites on this profile's traffic", vpn) {
-                VpnService.prepare(context)?.let { vpnLauncher.launch(it) }
+                disclosure = Disclosure.VPN
             }
         }
     }
@@ -116,4 +139,49 @@ private fun isAccessibilityEnabled(context: Context): Boolean {
     ) ?: return false
     val ours = ComponentName(context, VowAccessibilityService::class.java)
     return enabled.split(':').any { ComponentName.unflattenFromString(it) == ours }
+}
+
+private enum class Disclosure(val title: String, val body: String, val step: String) {
+    USAGE(
+        "Allow usage access",
+        "Vow reads which apps you open and for how long, so it can enforce the daily limits and " +
+            "YouTube allowance you set, and so it can tell your personal apps apart from a work profile.\n\n" +
+            "This data stays on your phone. It is never uploaded, shared or sold.",
+        "On the next screen, find Vow and turn on \u201CPermit usage access\u201D."
+    ),
+    ACCESSIBILITY(
+        "Allow accessibility",
+        "Vow uses the Accessibility API to see which app is on screen and, inside apps like YouTube, " +
+            "Instagram and your browser, whether you are in Shorts, Reels or on a page with a blocked word. " +
+            "It then closes that screen or shows a block screen.\n\n" +
+            "It only acts on apps in your personal profile. It does not read messages, passwords or " +
+            "typed text, and nothing it sees leaves your phone.",
+        "On the next screen, open Vow and turn it on. If it is greyed out, go to Settings \u2192 Apps \u2192 Vow \u2192 \u22EE \u2192 Allow restricted settings."
+    ),
+    VPN(
+        "Turn on the content filter",
+        "Vow creates a local VPN that only looks at the names of websites your phone looks up, " +
+            "and answers \u201Cnot found\u201D for adult sites and your blocked keywords.\n\n" +
+            "It runs entirely on your phone. Your browsing is not sent to Vow or anyone else, and " +
+            "work-profile traffic is not affected.",
+        "Android will ask you to confirm the connection request."
+    )
+}
+
+@Composable
+private fun DisclosureDialog(d: Disclosure, onDismiss: () -> Unit, onAgree: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        title = { Text(d.title) },
+        text = {
+            Column {
+                Text(d.body, style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(12.dp))
+                Text(d.step, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        confirmButton = { TextButton(onClick = onAgree) { Text("Agree and continue") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Not now") } }
+    )
 }
