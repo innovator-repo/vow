@@ -35,6 +35,8 @@ class UsageMonitorService : Service() {
         const val NOTIFICATION_ID = 2
         private const val WIND_DOWN_CHANNEL = "vow_wind_down"
         private const val WIND_DOWN_ID = 3
+        private const val DNS_ALERT_CHANNEL = "vow_dns_alert"
+        private const val DNS_ALERT_ID = 4
     }
 
     override fun onCreate() {
@@ -72,7 +74,8 @@ class UsageMonitorService : Service() {
                     { checkAppUsageLimits() },
                     { checkYouTubeUsage() },
                     { updateStats() },
-                    { checkWindDown() }
+                    { checkWindDown() },
+                    { checkPrivateDnsLock() }
                 )) {
                     try { step() } catch (_: Exception) {}
                 }
@@ -142,7 +145,50 @@ class UsageMonitorService : Service() {
         prefs.saveStats(stats.copy(totalReclaimedMinutes = reclaimed, daysTracked = tracked, lastProcessedDate = today))
     }
 
+    private var dnsAlertShown = false
     private var windDownNotifiedOn = ""
+
+    /**
+     * Private DNS can only be set by the user, so when a locked hostname is replaced Vow says so
+     * rather than silently losing the filter.
+     */
+    private suspend fun checkPrivateDnsLock() {
+        val locked = prefs.getLockedPrivateDns().first()
+        if (locked.isBlank()) return
+        val protectDns = prefs.getRestrictions().first().any { it.type == RestrictionType.DNS && it.enabled }
+        if (!protectDns) return
+
+        val current = com.vow.app.service.vpn.PrivateDns.hostname(this)
+        if (current == locked) {
+            if (dnsAlertShown) {
+                getSystemService(NotificationManager::class.java).cancel(DNS_ALERT_ID)
+                dnsAlertShown = false
+            }
+            return
+        }
+        if (dnsAlertShown) return
+        dnsAlertShown = true
+
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.createNotificationChannel(
+            NotificationChannel(DNS_ALERT_CHANNEL, "Filter alerts", NotificationManager.IMPORTANCE_HIGH)
+        )
+        nm.notify(
+            DNS_ALERT_ID,
+            NotificationCompat.Builder(this, DNS_ALERT_CHANNEL)
+                .setSmallIcon(R.drawable.ic_shield)
+                .setContentTitle("Private DNS was changed")
+                .setContentText("Set it back to $locked to keep sites filtered.")
+                .setStyle(NotificationCompat.BigTextStyle().bigText(
+                    "Vow's filtering was using $locked. Open Settings \u2192 Private DNS and set that " +
+                        "hostname again. Turning the filter off needs the usual cooling-off period."
+                ))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setOngoing(true)
+                .build()
+        )
+    }
+
 
     private suspend fun checkWindDown() {
         val on = prefs.getRestrictions().first().any { it.type == RestrictionType.NIGHT_MODE && it.enabled }

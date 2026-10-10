@@ -32,9 +32,17 @@ class VowPreferences(private val context: Context) {
         private val KEY_ADULT_DOMAINS = stringPreferencesKey("adult_domains_extra")
         private val KEY_DEVICE_OWNER = booleanPreferencesKey("is_device_owner")
         private val KEY_PENDING_CHANGES = stringPreferencesKey("pending_changes")
+        private val KEY_LOCKED_PRIVATE_DNS = stringPreferencesKey("locked_private_dns")
 
         private inline fun <T> safe(fallback: T, block: () -> T): T =
             try { block() } catch (_: Exception) { fallback }
+    }
+
+    /** The Private DNS hostname Vow is holding in place (empty when nothing is locked). */
+    fun getLockedPrivateDns(): Flow<String> = context.dataStore.data.map { it[KEY_LOCKED_PRIVATE_DNS] ?: "" }
+
+    suspend fun setLockedPrivateDns(hostname: String) {
+        context.dataStore.edit { it[KEY_LOCKED_PRIVATE_DNS] = hostname }
     }
 
     // Pending (delayed) loosening edits

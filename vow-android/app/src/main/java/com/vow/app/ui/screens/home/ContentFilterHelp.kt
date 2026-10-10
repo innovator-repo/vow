@@ -63,8 +63,8 @@ fun ContentFilterHelpDialog(onRetry: () -> Unit, onDismiss: () -> Unit) {
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "Android can filter adult sites by itself, with no VPN. Copy one of these hostnames " +
-                        "into Settings → Private DNS. Turn on Vow's “DNS Protection” afterwards so it " +
-                        "can't be changed on impulse.",
+                        "into Settings → Private DNS. Vow then holds that setting in place: changing it " +
+                        "back needs the usual cooling-off period.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

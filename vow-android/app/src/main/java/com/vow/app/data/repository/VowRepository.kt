@@ -75,7 +75,12 @@ class VowRepository(context: Context) {
         if (existing >= 0) {
             val old = list[existing]
             if (old.sealState == SealState.SEALED) return // Cannot modify sealed
-            list[existing] = restriction.copy(id = old.id)
+            // Keep the identity, any seal in progress, and earlier words the user wrote.
+            list[existing] = old.copy(
+                enabled = true,
+                reason = reason.ifBlank { old.reason },
+                ifThenPlan = ifThenPlan.ifBlank { old.ifThenPlan }
+            )
         } else {
             list.add(restriction)
         }
@@ -368,6 +373,20 @@ class VowRepository(context: Context) {
             c.copy(applied = true)
         }
         prefs.savePendingChanges(updated.filter { now - it.requestedAt < 30 * DAY_MS || (!it.applied && !it.cancelled) })
+    }
+
+    /**
+     * Remembers the filtering resolver already configured in Android and turns on DNS Protection,
+     * so the setting can't be changed without the usual cooling-off.
+     */
+    suspend fun lockPrivateDns(hostname: String): Boolean {
+        if (hostname.isBlank()) return false
+        if (prefs.getLockedPrivateDns().first() == hostname &&
+            prefs.getRestrictions().first().any { it.type == RestrictionType.DNS && it.enabled }
+        ) return false
+        prefs.setLockedPrivateDns(hostname)
+        enableRestriction(RestrictionType.DNS, "", "")
+        return true
     }
 
     fun todayKey(): String = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())

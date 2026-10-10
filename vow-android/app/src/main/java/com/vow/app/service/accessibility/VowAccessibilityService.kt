@@ -155,11 +155,17 @@ class VowAccessibilityService : AccessibilityService() {
                 has("Force stop") || has("Uninstall")) -> true
             protectUninstall && has("Use $label") -> true
             protectUninstall && aboutVow && (has("Always-on VPN") || has("Forget VPN")) -> true
-            protectDns && (cls.contains("PrivateDns") || has("Private DNS provider hostname")) -> true
+            protectDns && isPrivateDnsScreen(cls, root) -> true
             protectTime && (cls.contains("DateTime") || has("Set time automatically")) -> true
             else -> false
         }
         if (block) performGlobalAction(GLOBAL_ACTION_BACK)
+    }
+
+    /** The Private DNS editor only; the surrounding settings list stays usable. */
+    private fun isPrivateDnsScreen(className: String, root: AccessibilityNodeInfo): Boolean {
+        if (className.contains("PrivateDns", ignoreCase = true)) return true
+        return PRIVATE_DNS_OPTIONS.any { root.findAccessibilityNodeInfosByText(it).isNotEmpty() }
     }
 
     private fun isAdminActive(): Boolean =
@@ -187,6 +193,15 @@ class VowAccessibilityService : AccessibilityService() {
                 }
             }
         }
+    }
+
+    private companion object {
+        /** Options shown inside the Private DNS chooser on stock and Samsung builds. */
+        val PRIVATE_DNS_OPTIONS = listOf(
+            "Private DNS provider hostname",
+            "Enter hostname of DNS provider",
+            "Designated private DNS"
+        )
     }
 
     override fun onInterrupt() {}
