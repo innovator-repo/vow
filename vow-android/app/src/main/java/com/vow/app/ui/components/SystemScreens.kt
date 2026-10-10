@@ -31,13 +31,21 @@ object SystemScreens {
         appDetails(context)
     )
 
-    /** Where consent is given when the system's VPN confirmation dialog is unavailable. */
-    fun openVpnSettings(context: Context) = start(
+    /** Android's encrypted-DNS setting: the alternative when Vow's own filter can't be enabled. */
+    fun openPrivateDns(context: Context) = start(
         context,
-        "Open Settings → Connections → More connection settings → VPN, then turn on Vow.",
-        Intent(Settings.ACTION_VPN_SETTINGS),
-        Intent("android.net.vpn.SETTINGS"),
-        Intent(Settings.ACTION_WIRELESS_SETTINGS)
+        "Open Settings → Connections → More connection settings → Private DNS.",
+        Intent("android.settings.PRIVATE_DNS_SETTINGS"),
+        Intent(Settings.ACTION_WIRELESS_SETTINGS),
+        Intent(Settings.ACTION_SETTINGS)
+    )
+
+    /** The system app that shows the VPN permission prompt, so it can be re-enabled if disabled. */
+    fun openVpnDialogsAppInfo(context: Context) = start(
+        context,
+        "Open Settings → Apps → ⋮ → Show system apps → VPN, then tap Enable.",
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", "com.android.vpndialogs", null)),
+        Intent(Settings.ACTION_APPLICATION_SETTINGS)
     )
 
     fun addDeviceAdmin(context: Context, explanation: String) = start(
