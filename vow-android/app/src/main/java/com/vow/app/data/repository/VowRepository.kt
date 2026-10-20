@@ -294,6 +294,7 @@ class VowRepository(context: Context) {
         val old = prefs.getNightConfig().first()
         if (isTightening(old, new)) {
             prefs.saveNightConfig(new)
+            LumeBus.sendSleepSync(appContext, new)
             return EditResult.Applied
         }
         if (sealed(RestrictionType.NIGHT_MODE)) return EditResult.Refused("Night mode is sealed.")
@@ -303,6 +304,22 @@ class VowRepository(context: Context) {
                 .format(new.startHour, new.startMinute, new.endHour, new.endMinute),
             prefs.encodeNightConfig(old), prefs.encodeNightConfig(new)
         )
+    }
+
+    /**
+     * A sleep schedule sent by a peer app. Same rules as a local edit (tightening applies, loosening waits out its
+     * cooling-off), no echo back, and a repeat of a change already waiting does not restart its timer.
+     */
+    suspend fun applyPeerNightConfig(new: NightModeConfig) {
+        val old = prefs.getNightConfig().first()
+        if (prefs.encodeNightConfig(old) == prefs.encodeNightConfig(new)) return
+        val newJson = prefs.encodeNightConfig(new)
+        if (prefs.getPendingChanges().first().any {
+                it.kind == ChangeKind.NIGHT_CONFIG && !it.applied && !it.cancelled && it.newJson == newJson
+            }) return
+        if (isTightening(old, new)) { prefs.saveNightConfig(new); return }
+        if (sealed(RestrictionType.NIGHT_MODE)) return
+        queue(ChangeKind.NIGHT_CONFIG, "night", "Sleep Lock schedule from Kasane", prefs.encodeNightConfig(old), newJson)
     }
 
     /** [new] = null removes the rule. */
@@ -376,7 +393,9 @@ class VowRepository(context: Context) {
                 ChangeKind.NIGHT_CONFIG -> {
                     val current = prefs.encodeNightConfig(prefs.getNightConfig().first())
                     if (sealed(RestrictionType.NIGHT_MODE) || current != c.baseJson) return@map c.copy(cancelled = true)
-                    prefs.saveNightConfig(prefs.decodeNightConfig(c.newJson!!))
+                    val applied = prefs.decodeNightConfig(c.newJson!!)
+                    prefs.saveNightConfig(applied)
+                    LumeBus.sendSleepSync(appContext, applied)
                 }
                 ChangeKind.APP_RULE -> {
                     val rules = prefs.getAppRules().first()

@@ -91,6 +91,15 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name=".ipc.SleepSyncReceiver"
+            android:exported="true"
+            android:permission="app.lume.permission.ECOSYSTEM_SYNC">
+            <intent-filter>
+                <action android:name="app.lume.action.SLEEP_LOCK_SYNC" />
+            </intent-filter>
+        </receiver>
+
         <!-- Device Admin Receiver -->
         <receiver
             android:name=".service.admin.VowDeviceAdminReceiver"

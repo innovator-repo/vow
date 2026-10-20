@@ -3,6 +3,7 @@ package com.vow.app.ipc
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import com.vow.app.data.model.NightModeConfig
 
 /**
  * Ecosystem broadcasts. Every send is explicit (setPackage), guarded by the signature permission,
@@ -19,6 +20,8 @@ object LumeBus {
     const val ACTION_LOG_CHECK = "app.kasane.action.LOG_CHECK"
     const val ACTION_ECO_METRICS = "app.kasane.action.ECO_METRICS"
     const val ACTION_RULE_EVENT = "app.lume.action.RULE_EVENT"
+    /** Shared Sleep Lock schedule. Extras: on (Boolean), startHour, startMinute, endHour, endMinute (Int). */
+    const val ACTION_SLEEP_SYNC = "app.lume.action.SLEEP_LOCK_SYNC"
 
     const val REN_QUICK_URI = "ren://session/quick?source=vow_redirect"
     const val KATACHI_NEXT_URI = "katachi://puzzle/next?source=vow_redirect"
@@ -39,6 +42,13 @@ object LumeBus {
     fun metricsPayload(reclaimedMinutes: Long, youtubeUsedMinutes: Int, shortVideoBlockAttempts: Int) =
         "{\"reclaimedMinutes\":$reclaimedMinutes,\"youtubeUsedMinutes\":$youtubeUsedMinutes," +
             "\"shortVideoBlockAttempts\":$shortVideoBlockAttempts}"
+
+    fun sleepSyncIntent(c: NightModeConfig, target: String) = Intent(ACTION_SLEEP_SYNC).setPackage(target)
+        .putExtra("on", c.enabled).putExtra("startHour", c.startHour).putExtra("startMinute", c.startMinute)
+        .putExtra("endHour", c.endHour).putExtra("endMinute", c.endMinute)
+
+    fun sendSleepSync(context: Context, c: NightModeConfig) =
+        send(context, KASANE, sleepSyncIntent(c, KASANE))
 
     fun sendLogCheck(context: Context, item: String, done: Boolean) =
         send(context, KASANE, logCheckIntent(item, done))
@@ -74,5 +84,13 @@ object RuleEventParser {
     fun encode(rule: String?, kind: String?, now: Long): String? {
         if (rule.isNullOrBlank() || rule.length > 64 || '|' in rule || kind !in KINDS) return null
         return "$rule|$kind|$now"
+    }
+}
+
+/** Reads a SLEEP_LOCK_SYNC payload onto the current config; null if anything is missing or out of range. */
+object SleepSync {
+    fun merge(current: NightModeConfig, on: Boolean?, sh: Int, sm: Int, eh: Int, em: Int): NightModeConfig? {
+        if (on == null || sh !in 0..23 || eh !in 0..23 || sm !in 0..59 || em !in 0..59) return null
+        return current.copy(enabled = on, startHour = sh, startMinute = sm, endHour = eh, endMinute = em)
     }
 }

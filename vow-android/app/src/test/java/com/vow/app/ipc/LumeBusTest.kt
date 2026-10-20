@@ -45,4 +45,14 @@ class LumeBusTest {
         assertNull(RuleEventParser.encode(null, "kept", 5))
         assertNull(RuleEventParser.encode("a|b", "kept", 5))
     }
+
+    @Test fun sleepSyncMergeValidatesRanges() {
+        val cur = com.vow.app.data.model.NightModeConfig()
+        val m = SleepSync.merge(cur, true, 22, 30, 7, 0)!!
+        assertEquals(22, m.startHour); assertEquals(30, m.startMinute); assertEquals(7, m.endHour)
+        assertEquals(cur.windDownMinutes, m.windDownMinutes)
+        assertNull(SleepSync.merge(cur, true, 24, 0, 7, 0))
+        assertNull(SleepSync.merge(cur, null, 22, 0, 7, 0))
+        assertNull(SleepSync.merge(cur, true, 22, 60, 7, 0))
+    }
 }
