@@ -88,7 +88,7 @@ fun CoolingOffScreen(
                     Text(
                         "Turn on automatic date & time in Android settings. Waits can't finish while the clock is set by hand.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = VowAmber,
+                        color = vowWarm,
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
                 }
@@ -148,7 +148,7 @@ private fun RequestCard(
     VowCard(modifier = Modifier.padding(vertical = 5.dp)) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconBubble(Icons.Default.HourglassTop, VowAmber, size = 40.dp)
+                IconBubble(Icons.Default.HourglassTop, vowWarm, size = 40.dp)
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
@@ -162,13 +162,13 @@ private fun RequestCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                if (!mature) Pill(remaining(request.maturesAt - now), VowAmber)
+                if (!mature) Pill(remaining(request.maturesAt - now), vowWarm)
             }
             if (mature && !inDaytime) {
                 Spacer(Modifier.height(10.dp))
                 Text(
                     "Ready, but it can only be completed between 8 AM and 8 PM.",
-                    style = MaterialTheme.typography.bodySmall, color = VowAmber
+                    style = MaterialTheme.typography.bodySmall, color = vowWarm
                 )
             }
             Spacer(Modifier.height(12.dp))

@@ -147,7 +147,7 @@ private fun RestrictionCard(
 
             if (isSealed || isPendingSeal) {
                 Spacer(modifier = Modifier.height(10.dp))
-                Pill(if (isSealed) "Sealed forever" else "Sealing \u2014 confirm in 24h", if (isSealed) VowSeal else VowAmber)
+                Pill(if (isSealed) "Sealed forever" else "Sealing \u2014 confirm in 24h", if (isSealed) VowSeal else vowWarm)
             }
 
             if (exceptionActive || exceptionPending) {

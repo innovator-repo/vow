@@ -18,7 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vow.app.service.vpn.PrivateDns
 import com.vow.app.ui.components.*
-import com.vow.app.ui.theme.VowAmber
+import com.vow.app.ui.theme.vowWarm
 import com.vow.app.ui.theme.VowTeal
 
 /**
@@ -55,7 +55,7 @@ fun ContentFilterHelpDialog(onRetry: () -> Unit, onDismiss: () -> Unit) {
                 Spacer(Modifier.height(8.dp))
                 Row {
                     QuietButton("Open app info", color = VowTeal, onClick = { SystemScreens.openVpnDialogsAppInfo(context) })
-                    QuietButton("Try again", color = VowAmber, onClick = { haptics.click(); onRetry() })
+                    QuietButton("Try again", color = vowWarm, onClick = { haptics.click(); onRetry() })
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -108,7 +108,7 @@ fun ContentFilterHelpDialog(onRetry: () -> Unit, onDismiss: () -> Unit) {
                 }
             }
         },
-        icon = { IconBubble(Icons.Default.Dns, VowAmber, size = 44.dp) },
+        icon = { IconBubble(Icons.Default.Dns, vowWarm, size = 44.dp) },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } }
     )
 }

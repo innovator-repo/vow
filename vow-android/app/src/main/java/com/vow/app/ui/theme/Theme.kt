@@ -84,6 +84,16 @@ private val VowShapes = Shapes(
     extraLarge = RoundedCornerShape(36.dp)
 )
 
+val LocalCircadianPhase = androidx.compose.runtime.compositionLocalOf { CircadianPhase.DAY }
+
+/** Warm accent that turns into calm Horizon Sky during Sleep Lock hours (no amber or red then). */
+val vowWarm: Color
+    @Composable get() = if (LocalCircadianPhase.current == CircadianPhase.SLEEP) VowSky else VowAmber
+
+/** Alert tone for "nearly out": Covenant Violet at night, rose by day. */
+val vowAlert: Color
+    @Composable get() = if (LocalCircadianPhase.current == CircadianPhase.SLEEP) VowSeal else VowRose
+
 @Composable
 fun VowTheme(
     systemDark: Boolean = isSystemInDarkTheme(),
@@ -117,12 +127,14 @@ fun VowTheme(
         }
     }
 
+    androidx.compose.runtime.CompositionLocalProvider(LocalCircadianPhase provides phase) {
     MaterialTheme(
         colorScheme = colorScheme,
         typography = VowTypography,
         shapes = VowShapes,
         content = content
     )
+    }
 }
 
 /** Current circadian phase, re-evaluated every minute. */

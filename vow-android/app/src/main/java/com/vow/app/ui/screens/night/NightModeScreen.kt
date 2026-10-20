@@ -102,7 +102,7 @@ fun NightModeScreen(
                             TimeTile("Starts", config.startHour, config.startMinute, Icons.Default.NightsStay, VowSeal, Modifier.weight(1f)) {
                                 pickTime(config.startHour, config.startMinute) { h, m -> propose(config.copy(startHour = h, startMinute = m)) }
                             }
-                            TimeTile("Ends", config.endHour, config.endMinute, Icons.Default.WbSunny, VowAmber, Modifier.weight(1f)) {
+                            TimeTile("Ends", config.endHour, config.endMinute, Icons.Default.WbSunny, vowWarm, Modifier.weight(1f)) {
                                 pickTime(config.endHour, config.endMinute) { h, m -> propose(config.copy(endHour = h, endMinute = m)) }
                             }
                         }

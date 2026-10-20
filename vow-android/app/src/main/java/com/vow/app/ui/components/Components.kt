@@ -36,10 +36,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** Springy press feedback: shrinks slightly while held, bounces back on release. */
-fun Modifier.pressScale(pressed: Boolean, scaleDown: Float = 0.96f): Modifier = composed {
+fun Modifier.pressScale(pressed: Boolean, scaleDown: Float = com.vow.app.designsystem.LumeMotion.PRESSED_SCALE): Modifier = composed {
     val scale by animateFloatAsState(
         targetValue = if (pressed) scaleDown else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        animationSpec = com.vow.app.designsystem.LumeMotion.spatial(),
         label = "pressScale"
     )
     graphicsLayer { scaleX = scale; scaleY = scale }
@@ -80,7 +80,7 @@ fun VowCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .pressScale(pressed && onClick != null, 0.975f)
+            .pressScale(pressed && onClick != null)
             .clip(shape)
             .background(animatedColor)
             .border(1.dp, border, shape)

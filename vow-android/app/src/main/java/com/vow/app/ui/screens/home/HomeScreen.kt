@@ -87,9 +87,9 @@ fun HomeScreen(
                     Text("Vow", style = MaterialTheme.typography.displaySmall)
                 }
                 if (pendingCoolingOff > 0) {
-                    BadgedBox(badge = { Badge(containerColor = VowAmber) { Text("$pendingCoolingOff", color = Ink) } }) {
+                    BadgedBox(badge = { Badge(containerColor = vowWarm) { Text("$pendingCoolingOff", color = Ink) } }) {
                         IconButton(onClick = { haptics.click(); onNavigateToCoolingOff() }) {
-                            Icon(Icons.Default.HourglassTop, "Pending requests", tint = VowAmber)
+                            Icon(Icons.Default.HourglassTop, "Pending requests", tint = vowWarm)
                         }
                     }
                 }
@@ -109,7 +109,7 @@ fun HomeScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(vertical = 8.dp)) {
                     Pill("$activeRestrictions active", VowTeal)
                     if (sealedRestrictions > 0) Pill("$sealedRestrictions sealed", VowSeal)
-                    if (pendingCoolingOff > 0) Pill("$pendingCoolingOff cooling", VowAmber)
+                    if (pendingCoolingOff > 0) Pill("$pendingCoolingOff cooling", vowWarm)
                 }
             }
 
@@ -130,7 +130,7 @@ fun HomeScreen(
                 HomeCardData("Restrictions", "$activeRestrictions protections active", Icons.Default.Shield, VowTeal, onNavigateToRestrictions),
                 HomeCardData("Profiles", "Work, Study, Bedtime", Icons.Default.Tune, VowSky, onNavigateToProfiles),
                 HomeCardData("Night Mode", "Essentials only after 10 PM", Icons.Outlined.DarkMode, VowSeal, onNavigateToNightMode),
-                HomeCardData("App Rules", "Time limits and blocking", Icons.Default.Apps, VowAmber, onNavigateToAppRules),
+                HomeCardData("App Rules", "Time limits and blocking", Icons.Default.Apps, vowWarm, onNavigateToAppRules),
                 HomeCardData(
                     "Your Progress",
                     "${stats.totalReclaimedMinutes / 60}h ${stats.totalReclaimedMinutes % 60}m reclaimed",
@@ -218,8 +218,8 @@ private fun ReclaimedTimeRing(reclaimedMinutes: Long, modifier: Modifier = Modif
 private fun YouTubeAllowanceCard(usedMinutes: Int, allowanceMinutes: Int) {
     val progress = if (allowanceMinutes > 0) usedMinutes.toFloat() / allowanceMinutes else 0f
     val color = when {
-        progress >= 1f -> VowRose
-        progress >= 0.8f -> VowAmber
+        progress >= 1f -> vowAlert
+        progress >= 0.8f -> vowWarm
         else -> VowTeal
     }
     val animated by animateFloatAsState(progress.coerceIn(0f, 1f), tween(1200, easing = EaseOutCubic), label = "yt")

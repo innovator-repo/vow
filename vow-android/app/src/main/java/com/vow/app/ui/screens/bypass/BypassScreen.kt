@@ -111,14 +111,14 @@ fun BypassScreen(
             StaggeredItem(1) {
                 if (restriction.ifThenPlan.isNotEmpty()) {
                     VowCard(
-                        containerColor = VowAmber.copy(alpha = 0.10f),
-                        borderBrush = Brush.linearGradient(listOf(VowAmber.copy(alpha = 0.45f), VowAmber.copy(alpha = 0.1f)))
+                        containerColor = vowWarm.copy(alpha = 0.10f),
+                        borderBrush = Brush.linearGradient(listOf(vowWarm.copy(alpha = 0.45f), vowWarm.copy(alpha = 0.1f)))
                     ) {
                         Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                            IconBubble(Icons.Default.Lightbulb, VowAmber, size = 40.dp)
+                            IconBubble(Icons.Default.Lightbulb, vowWarm, size = 40.dp)
                             Spacer(Modifier.width(14.dp))
                             Column {
-                                Text("YOUR PLAN", style = MaterialTheme.typography.labelSmall, color = VowAmber)
+                                Text("YOUR PLAN", style = MaterialTheme.typography.labelSmall, color = vowWarm)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(restriction.ifThenPlan, style = com.vow.app.ui.theme.ReasonStyle)
                             }

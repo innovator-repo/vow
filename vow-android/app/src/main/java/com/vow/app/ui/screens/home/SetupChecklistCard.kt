@@ -149,9 +149,9 @@ fun SetupChecklistCard() {
 
     com.vow.app.ui.components.VowCard(
         modifier = Modifier.padding(bottom = 16.dp),
-        containerColor = com.vow.app.ui.theme.VowAmber.copy(alpha = 0.08f),
+        containerColor = com.vow.app.ui.theme.vowWarm.copy(alpha = 0.08f),
         borderBrush = androidx.compose.ui.graphics.Brush.linearGradient(
-            listOf(com.vow.app.ui.theme.VowAmber.copy(alpha = 0.45f), com.vow.app.ui.theme.VowAmber.copy(alpha = 0.08f))
+            listOf(com.vow.app.ui.theme.vowWarm.copy(alpha = 0.45f), com.vow.app.ui.theme.vowWarm.copy(alpha = 0.08f))
         )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -184,13 +184,13 @@ fun SetupChecklistCard() {
                             "uninstall page while Accessibility is on. To add the system-level lock, open " +
                             "Settings → Security → Other security settings → Device admin apps and turn on Vow.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = com.vow.app.ui.theme.VowAmber,
+                        color = com.vow.app.ui.theme.vowWarm,
                         modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
                     )
                     QuietButton(
                         "Open device admin settings",
                         onClick = { SystemScreens.openDeviceAdminSettings(context) },
-                        color = com.vow.app.ui.theme.VowAmber
+                        color = com.vow.app.ui.theme.vowWarm
                     )
                 }
             }
