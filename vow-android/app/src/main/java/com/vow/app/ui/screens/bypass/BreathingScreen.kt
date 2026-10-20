@@ -145,7 +145,7 @@ fun BreathingScreen(
                 }
                 Text(
                     if (isComplete) "✓" else "$secondsRemaining",
-                    style = MaterialTheme.typography.displayMedium,
+                    style = MaterialTheme.typography.displayMedium.copy(fontFamily = com.vow.app.designsystem.GeistMono),
                     color = Ink
                 )
             }
@@ -154,7 +154,7 @@ fun BreathingScreen(
 
             AnimatedVisibility(visible = !isComplete, enter = fadeIn(), exit = fadeOut()) {
                 Text(
-                    "This cannot be skipped.\nThe urge will pass.",
+                    "Breathe with the circle.\nThe urge will pass.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center

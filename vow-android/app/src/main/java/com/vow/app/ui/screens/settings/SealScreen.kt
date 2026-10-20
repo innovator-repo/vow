@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import com.vow.app.ui.components.HoldToConfirmButton
+import com.vow.app.ui.components.rememberHaptics
 import com.vow.app.ui.theme.SealBrush
 import com.vow.app.ui.theme.VowSeal
 import kotlinx.coroutines.flow.first
@@ -33,6 +34,7 @@ fun SealScreen(
     val restrictions by repo.prefs.getRestrictions().collectAsState(initial = emptyList())
     val restriction = restrictions.find { it.id == restrictionId }
     val scope = rememberCoroutineScope()
+    val haptics = rememberHaptics()
     var confirmText by remember { mutableStateOf("") }
     val confirmSentence = "I seal this forever"
 
@@ -92,7 +94,7 @@ fun SealScreen(
                         text = "Hold to begin sealing",
                         icon = Icons.Default.Lock,
                         brush = SealBrush,
-                        onConfirmed = { scope.launch { repo.requestSeal(restrictionId) } }
+                        onConfirmed = { haptics.seal(); scope.launch { repo.requestSeal(restrictionId) } }
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
@@ -133,7 +135,7 @@ fun SealScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             "\"$confirmSentence\"",
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.titleLarge.copy(fontFamily = com.vow.app.designsystem.Newsreader),
                             color = VowSeal
                         )
                         Spacer(modifier = Modifier.height(16.dp))
@@ -152,6 +154,7 @@ fun SealScreen(
                             holdMillis = 3000,
                             enabled = confirmText.trim().equals(confirmSentence, ignoreCase = true),
                             onConfirmed = {
+                                haptics.seal()
                                 scope.launch {
                                     repo.confirmSeal(restrictionId)
                                     onBack()

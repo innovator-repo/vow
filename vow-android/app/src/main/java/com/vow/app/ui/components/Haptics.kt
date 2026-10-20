@@ -1,29 +1,18 @@
 package com.vow.app.ui.components
 
-import android.content.Context
 import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import android.view.HapticFeedbackConstants
 import android.view.View
 import androidx.compose.runtime.Composable
+import com.vow.app.designsystem.BreathStep
+import com.vow.app.designsystem.LumeHaptic
+import com.vow.app.designsystem.LumeHaptics
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalView
 
 enum class BreathCue { INHALE, HOLD, EXHALE }
 
 class Haptics(private val view: View) {
-
-    private val vibrator: Vibrator? by lazy {
-        val ctx = view.context
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            ctx.getSystemService(VibratorManager::class.java)?.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            ctx.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-        }
-    }
 
     fun tick() = perform(HapticFeedbackConstants.CLOCK_TICK)
 
@@ -50,26 +39,22 @@ class Haptics(private val view: View) {
 
     fun heavy() = perform(HapticFeedbackConstants.LONG_PRESS)
 
-    /** Inhale swells, exhale falls away, hold is a soft tap. */
-    fun breath(cue: BreathCue) {
-        val v = vibrator
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && v != null) {
-            val primitive = when (cue) {
-                BreathCue.INHALE -> VibrationEffect.Composition.PRIMITIVE_SLOW_RISE
-                BreathCue.HOLD -> VibrationEffect.Composition.PRIMITIVE_TICK
-                BreathCue.EXHALE -> VibrationEffect.Composition.PRIMITIVE_QUICK_FALL
-            }
-            if (v.areAllPrimitivesSupported(primitive)) {
-                v.vibrate(
-                    VibrationEffect.startComposition()
-                        .addPrimitive(primitive, if (cue == BreathCue.HOLD) 0.4f else 0.7f)
-                        .compose()
-                )
-                return
-            }
+    private val lume by lazy { LumeHaptics(view.context) }
+
+    /** BREATH_WAVE: inhale swells, hold is a soft tap, exhale falls away. */
+    fun breath(cue: BreathCue) = lume.breath(
+        when (cue) {
+            BreathCue.INHALE -> BreathStep.INHALE
+            BreathCue.HOLD -> BreathStep.HOLD
+            BreathCue.EXHALE -> BreathStep.EXHALE
         }
-        if (cue == BreathCue.HOLD) tick() else click()
-    }
+    )
+
+    /** GENTLE_NUDGE: a quiet tap for blocks; never a rejection buzz. */
+    fun nudge() = lume.play(LumeHaptic.GENTLE_NUDGE)
+
+    /** SEAL_LOCK: a latch sliding shut. */
+    fun seal() = lume.play(LumeHaptic.SEAL_LOCK)
 
     private fun perform(constant: Int) {
         view.performHapticFeedback(constant)

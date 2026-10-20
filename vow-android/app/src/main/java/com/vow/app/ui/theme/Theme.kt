@@ -5,7 +5,15 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.vow.app.designsystem.CircadianPhase
+import com.vow.app.designsystem.LumeSurfaces
+import kotlinx.coroutines.delay
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
@@ -78,10 +86,23 @@ private val VowShapes = Shapes(
 
 @Composable
 fun VowTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    systemDark: Boolean = isSystemInDarkTheme(),
+    phase: CircadianPhase = rememberCircadianPhase(),
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val surface = LumeSurfaces.forPhase(phase, systemDark)
+    val darkTheme = surface.dark
+    val base = if (darkTheme) DarkColorScheme else LightColorScheme
+    val colorScheme = base.copy(
+        background = surface.background,
+        surface = surface.background,
+        surfaceVariant = surface.surface,
+        onBackground = surface.text,
+        onSurface = surface.text,
+        onSurfaceVariant = surface.textMuted,
+        outline = surface.line,
+        outlineVariant = surface.surfaceHigh
+    )
 
     val view = LocalView.current
     if (!view.isInEditMode) {
@@ -102,4 +123,17 @@ fun VowTheme(
         shapes = VowShapes,
         content = content
     )
+}
+
+/** Current circadian phase, re-evaluated every minute. */
+@Composable
+fun rememberCircadianPhase(): CircadianPhase {
+    var phase by remember { mutableStateOf(CircadianPhase.now()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60_000)
+            phase = CircadianPhase.now()
+        }
+    }
+    return phase
 }
