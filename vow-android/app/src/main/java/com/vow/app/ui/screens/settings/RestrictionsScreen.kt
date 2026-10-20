@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vow.app.data.model.*
 import com.vow.app.data.repository.VowRepository
 import androidx.compose.animation.animateContentSize
@@ -76,6 +77,8 @@ fun RestrictionsScreen(
                         }
                     },
                     onSeal = { onNavigateToSeal(restriction.id) },
+                    onPlanException = { note -> scope.launch { repo.declareException(restriction.id, note) } },
+                    onCancelException = { scope.launch { repo.cancelException(restriction.id) } },
                     onKeywords = if (restriction.type == RestrictionType.KEYWORD_BLOCK) onNavigateToKeywords else null
                 ) }
             }
@@ -93,13 +96,27 @@ private fun RestrictionCard(
     restriction: Restriction,
     onToggle: (Boolean) -> Unit,
     onSeal: () -> Unit,
+    onPlanException: (String) -> Unit,
+    onCancelException: () -> Unit,
     onKeywords: (() -> Unit)?
 ) {
+    val now = System.currentTimeMillis()
+    val exceptionActive = ExceptionPolicy.activeState(restriction, now) == ExceptionState.PLANNED
+    val exceptionPending = ExceptionPolicy.isPending(restriction, now)
+    var planning by remember { mutableStateOf(false) }
+    var note by remember { mutableStateOf("") }
     val isSealed = restriction.sealState == SealState.SEALED
     val isPendingSeal = restriction.sealState == SealState.PENDING_SEAL
 
     val haptics = rememberHaptics()
     val accent = if (isSealed) VowSeal else VowTeal
+    if (planning) {
+        PlanExceptionDialog(
+            note = note, onNote = { note = it },
+            onDismiss = { planning = false },
+            onConfirm = { onPlanException(note); planning = false; note = "" }
+        )
+    }
     VowCard(
         modifier = Modifier.padding(vertical = 5.dp),
         containerColor = when {
@@ -133,6 +150,22 @@ private fun RestrictionCard(
                 Pill(if (isSealed) "Sealed forever" else "Sealing \u2014 confirm in 24h", if (isSealed) VowSeal else VowAmber)
             }
 
+            if (exceptionActive || exceptionPending) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Pill(if (exceptionActive) "Planned exception today" else "Exception starts in 24h", VowSeal)
+                if (restriction.exceptionNote.isNotBlank()) {
+                    Text(
+                        restriction.exceptionNote,
+                        style = ReasonStyle.copy(fontSize = 15.sp, lineHeight = 22.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
+                }
+                TextButton(onClick = { haptics.click(); onCancelException() }) { Text("Withdraw exception") }
+            } else if (restriction.enabled && !isSealed) {
+                TextButton(onClick = { haptics.click(); planning = true }) { Text("Plan an exception") }
+            }
+
             if (restriction.enabled && !isSealed && !isPendingSeal) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -154,6 +187,27 @@ private fun RestrictionCard(
             }
         }
     }
+}
+
+@Composable
+private fun PlanExceptionDialog(note: String, onNote: (String) -> Unit, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Plan an exception") },
+        text = {
+            Column {
+                Text(
+                    "Decide now, while you're calm. Before 08:00 it starts right away; any other time it starts in 24 hours " +
+                        "and covers that one day. The protection itself stays on.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(value = note, onValueChange = onNote, label = { Text("Why, in one sentence") })
+            }
+        },
+        confirmButton = { TextButton(onClick = onConfirm, enabled = note.isNotBlank()) { Text("Plan it") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Not now") } }
+    )
 }
 
 @Composable

@@ -14,6 +14,9 @@ enum class ProfileType {
     WORK, STUDY, BEDTIME, CUSTOM
 }
 
+/** NONE = the rule stands as written; PLANNED = a pre-committed, cold-state exception (no slip penalty). */
+enum class ExceptionState { NONE, PLANNED }
+
 data class Restriction(
     val id: String = UUID.randomUUID().toString(),
     val type: RestrictionType,
@@ -23,7 +26,12 @@ data class Restriction(
     val sealConfirmedAt: Long? = null,
     val reason: String = "",
     val ifThenPlan: String = "",
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    /** When a planned exception was declared, when it starts counting, and the day it covers. */
+    val exceptionState: ExceptionState = ExceptionState.NONE,
+    val exceptionNote: String = "",
+    val exceptionEffectiveAt: Long? = null,
+    val exceptionDay: String = ""
 )
 
 data class BlockedKeyword(
@@ -145,4 +153,11 @@ data class PendingChange(
 data class PasswordConfig(
     val passwordHash: String = "",
     val isSet: Boolean = false
+)
+
+/** Per-day counters surfaced to the ecosystem: short-video block attempts and urges redirected. */
+data class EcoCounters(
+    val day: String,
+    val shortVideoBlocks: Int = 0,
+    val redirected: Int = 0
 )

@@ -32,11 +32,43 @@ class VowPreferences(private val context: Context) {
         private val KEY_ADULT_DOMAINS = stringPreferencesKey("adult_domains_extra")
         private val KEY_DEVICE_OWNER = booleanPreferencesKey("is_device_owner")
         private val KEY_PENDING_CHANGES = stringPreferencesKey("pending_changes")
+        private val KEY_ECO = stringPreferencesKey("eco_counters")
+        private val KEY_DUOLINGO_DAY = stringPreferencesKey("duolingo_logged_day")
+        private val KEY_METRICS_DAY = stringPreferencesKey("eco_metrics_sent_day")
+        private val KEY_KEPT_DAY = stringPreferencesKey("rule_kept_sent_day")
         private val KEY_LOCKED_PRIVATE_DNS = stringPreferencesKey("locked_private_dns")
 
         private inline fun <T> safe(fallback: T, block: () -> T): T =
             try { block() } catch (_: Exception) { fallback }
     }
+
+    /** Day-scoped counters shared with the ecosystem (reset when the day changes). */
+    fun getEcoCounters(day: String): Flow<EcoCounters> = context.dataStore.data.map { prefs ->
+        safe(EcoCounters(day)) {
+            val o = JSONObject(prefs[KEY_ECO] ?: "{}")
+            if (o.optString("day") == day) {
+                EcoCounters(day, o.optInt("shortVideoBlocks"), o.optInt("redirected"))
+            } else EcoCounters(day)
+        }
+    }
+
+    suspend fun updateEcoCounters(day: String, change: (EcoCounters) -> EcoCounters) {
+        context.dataStore.edit { prefs ->
+            val o = runCatching { JSONObject(prefs[KEY_ECO] ?: "{}") }.getOrDefault(JSONObject())
+            val cur = if (o.optString("day") == day) EcoCounters(day, o.optInt("shortVideoBlocks"), o.optInt("redirected"))
+            else EcoCounters(day)
+            val n = change(cur)
+            prefs[KEY_ECO] = JSONObject().put("day", n.day).put("shortVideoBlocks", n.shortVideoBlocks)
+                .put("redirected", n.redirected).toString()
+        }
+    }
+
+    suspend fun getDuolingoLoggedDay(): String = context.dataStore.data.first()[KEY_DUOLINGO_DAY] ?: ""
+    suspend fun setDuolingoLoggedDay(day: String) { context.dataStore.edit { it[KEY_DUOLINGO_DAY] = day } }
+    suspend fun getMetricsSentDay(): String = context.dataStore.data.first()[KEY_METRICS_DAY] ?: ""
+    suspend fun setMetricsSentDay(day: String) { context.dataStore.edit { it[KEY_METRICS_DAY] = day } }
+    suspend fun getKeptSentDay(): String = context.dataStore.data.first()[KEY_KEPT_DAY] ?: ""
+    suspend fun setKeptSentDay(day: String) { context.dataStore.edit { it[KEY_KEPT_DAY] = day } }
 
     /** The Private DNS hostname Vow is holding in place (empty when nothing is locked). */
     fun getLockedPrivateDns(): Flow<String> = context.dataStore.data.map { it[KEY_LOCKED_PRIVATE_DNS] ?: "" }
@@ -212,6 +244,10 @@ class VowPreferences(private val context: Context) {
                 put("reason", r.reason)
                 put("ifThenPlan", r.ifThenPlan)
                 put("createdAt", r.createdAt)
+                put("exceptionState", r.exceptionState.name)
+                put("exceptionNote", r.exceptionNote)
+                put("exceptionEffectiveAt", r.exceptionEffectiveAt ?: -1L)
+                put("exceptionDay", r.exceptionDay)
             })
         }
         return arr.toString()
@@ -230,7 +266,12 @@ class VowPreferences(private val context: Context) {
                 sealConfirmedAt = o.getLong("sealConfirmedAt").takeIf { it >= 0 },
                 reason = o.optString("reason", ""),
                 ifThenPlan = o.optString("ifThenPlan", ""),
-                createdAt = o.getLong("createdAt")
+                createdAt = o.getLong("createdAt"),
+                exceptionState = runCatching { ExceptionState.valueOf(o.optString("exceptionState", "NONE")) }
+                    .getOrDefault(ExceptionState.NONE),
+                exceptionNote = o.optString("exceptionNote", ""),
+                exceptionEffectiveAt = o.optLong("exceptionEffectiveAt", -1L).takeIf { it >= 0 },
+                exceptionDay = o.optString("exceptionDay", "")
             )
         }
     }

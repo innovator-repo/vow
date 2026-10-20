@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vow.app.data.model.SealState
 import com.vow.app.data.repository.VowRepository
 import kotlinx.coroutines.launch
@@ -97,8 +98,7 @@ fun BypassScreen(
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     "\u201C${restriction.reason}\u201D",
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    fontStyle = FontStyle.Italic
+                                    style = com.vow.app.ui.theme.ReasonStyle.copy(fontSize = 20.sp, lineHeight = 28.sp)
                                 )
                             }
                         }
@@ -120,7 +120,7 @@ fun BypassScreen(
                             Column {
                                 Text("YOUR PLAN", style = MaterialTheme.typography.labelSmall, color = VowAmber)
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(restriction.ifThenPlan, style = MaterialTheme.typography.bodyLarge)
+                                Text(restriction.ifThenPlan, style = com.vow.app.ui.theme.ReasonStyle)
                             }
                         }
                     }
@@ -138,7 +138,7 @@ fun BypassScreen(
                     Text(
                         "Loosening needs a 90-second breathing exercise, then a " +
                             "${VowRepository.coolingHours(restriction.type)}-hour cooling-off. " +
-                            "No shortcuts \u2014 this gives the urge time to pass.",
+                            "The wait gives the urge time to pass. You can keep it active at any moment.",
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant

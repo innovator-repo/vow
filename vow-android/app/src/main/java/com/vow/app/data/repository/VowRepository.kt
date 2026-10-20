@@ -4,6 +4,7 @@ import android.content.Context
 import android.provider.Settings
 import com.vow.app.data.model.*
 import com.vow.app.data.prefs.VowPreferences
+import com.vow.app.ipc.LumeBus
 import kotlinx.coroutines.flow.first
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -87,6 +88,26 @@ class VowRepository(context: Context) {
         prefs.saveRestrictions(list)
     }
 
+    /** Plans a cold-state exception for a rule. Enforcement stays on; the day just isn't counted as a slip. */
+    suspend fun declareException(restrictionId: String, note: String): Boolean {
+        if (note.isBlank() || !isClockTrusted()) return false
+        val list = prefs.getRestrictions().first().toMutableList()
+        val i = list.indexOfFirst { it.id == restrictionId }
+        if (i < 0 || !list[i].enabled) return false
+        list[i] = ExceptionPolicy.declare(list[i], note, System.currentTimeMillis())
+        prefs.saveRestrictions(list)
+        LumeBus.sendRuleEvent(appContext, ruleId(list[i].type), LumeBus.RuleKind.EXCEPTION)
+        return true
+    }
+
+    suspend fun cancelException(restrictionId: String) {
+        val list = prefs.getRestrictions().first().toMutableList()
+        val i = list.indexOfFirst { it.id == restrictionId }
+        if (i < 0) return
+        list[i] = ExceptionPolicy.clear(list[i])
+        prefs.saveRestrictions(list)
+    }
+
     suspend fun requestLoosening(restrictionId: String): CoolingOffRequest? {
         val restrictions = prefs.getRestrictions().first()
         val restriction = restrictions.find { it.id == restrictionId } ?: return null
@@ -145,6 +166,7 @@ class VowRepository(context: Context) {
             if (restrictions[rIdx].sealState == SealState.SEALED) return LooseningResult.NOT_FOUND
             restrictions[rIdx] = restrictions[rIdx].copy(enabled = false)
             prefs.saveRestrictions(restrictions)
+            LumeBus.sendRuleEvent(appContext, ruleId(restrictions[rIdx].type), LumeBus.RuleKind.SLIP)
         }
         return LooseningResult.DONE
     }
@@ -395,6 +417,8 @@ class VowRepository(context: Context) {
         const val DAY_MS = 24 * 60 * 60 * 1000L
         private const val GRACE_MS = DAY_MS
         private const val PBKDF2_ITERATIONS = 120_000
+
+        fun ruleId(type: RestrictionType) = type.name.lowercase()
 
         fun coolingHours(type: RestrictionType): Int = when (type) {
             RestrictionType.DNS, RestrictionType.UNINSTALL -> 48
