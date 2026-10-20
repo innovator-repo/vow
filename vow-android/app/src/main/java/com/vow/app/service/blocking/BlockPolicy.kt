@@ -9,7 +9,7 @@ import com.vow.app.data.model.RestrictionType
 import com.vow.app.data.repository.VowRepository
 import kotlinx.coroutines.flow.first
 
-data class BlockReason(val title: String, val message: String)
+data class BlockReason(val title: String, val message: String, val type: RestrictionType? = null)
 
 class BlockPolicy(private val context: Context, private val repo: VowRepository) {
 
@@ -43,14 +43,15 @@ class BlockPolicy(private val context: Context, private val repo: VowRepository)
                 return BlockReason(
                     "$label is closed until morning",
                     "Night mode is on. Essentials still work — everything else opens again at " +
-                        "%02d:%02d.".format(config.endHour, config.endMinute)
+                        "%02d:%02d.".format(config.endHour, config.endMinute),
+                    RestrictionType.NIGHT_MODE
                 )
             }
         }
 
         if (rule != null && !appLimitsOff) {
             if (rule.blocked) {
-                return BlockReason("$label is blocked", "You chose to block this app. That choice still stands.")
+                return BlockReason("$label is blocked", "You chose to block this app. That choice still stands.", RestrictionType.APP_LIMIT)
             }
             val limit = rule.dailyLimitMinutes
             if (limit != null) {
@@ -58,7 +59,8 @@ class BlockPolicy(private val context: Context, private val repo: VowRepository)
                 if (used >= limit) {
                     return BlockReason(
                         "Today's time for $label is used up",
-                        "You set $limit minutes a day and used $used. It opens again tomorrow."
+                        "You set $limit minutes a day and used $used. It opens again tomorrow.",
+                        RestrictionType.APP_LIMIT
                     )
                 }
             }
@@ -70,7 +72,8 @@ class BlockPolicy(private val context: Context, private val repo: VowRepository)
             if (used >= allowance) {
                 return BlockReason(
                     "YouTube is done for today",
-                    "Today's allowance was $allowance minutes. It resets at midnight."
+                    "Today's allowance was $allowance minutes. It resets at midnight.",
+                    RestrictionType.YOUTUBE_LIMIT
                 )
             }
         }

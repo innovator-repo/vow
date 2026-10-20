@@ -2,6 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Lume ecosystem (signature-level: only apps signed with the same key can talk to each other) -->
+    <permission
+        android:name="app.lume.permission.ECOSYSTEM_SYNC"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="app.lume.permission.ECOSYSTEM_SYNC" />
+
     <!-- Network / VPN -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -25,6 +31,11 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <queries>
+        <package android:name="app.kasane" />
+        <package android:name="app.katachi" />
+        <package android:name="app.ren.japanese" />
+        <package android:name="com.sigil.app" />
+        <package android:name="com.duolingo" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
@@ -62,6 +73,14 @@
             android:launchMode="singleTask"
             android:taskAffinity="com.vow.app.block"
             android:theme="@style/Theme.Vow" />
+
+        <!-- Read-only ecosystem status (one row) -->
+        <provider
+            android:name=".ipc.VowStatusProvider"
+            android:authorities="com.vow.app.provider"
+            android:exported="true"
+            android:readPermission="app.lume.permission.ECOSYSTEM_SYNC"
+            android:writePermission="app.lume.permission.ECOSYSTEM_SYNC" />
 
         <!-- Device Admin Receiver -->
         <receiver

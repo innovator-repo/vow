@@ -12,7 +12,11 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.vow.app.MainActivity
 import com.vow.app.R
+import com.vow.app.data.model.ExceptionPolicy
+import com.vow.app.data.model.ExceptionState
 import com.vow.app.data.model.RestrictionType
+import com.vow.app.ipc.DuolingoRule
+import com.vow.app.ipc.LumeBus
 import com.vow.app.data.prefs.VowPreferences
 import com.vow.app.data.repository.VowRepository
 import com.vow.app.service.admin.VowDeviceAdminReceiver
@@ -72,7 +76,9 @@ class UsageMonitorService : Service() {
                     { checkAppUsageLimits() },
                     { checkYouTubeUsage() },
                     { updateStats() },
-                    { checkWindDown() }
+                    { checkWindDown() },
+                    { checkDuolingo() },
+                    { sendEcosystemUpdates() }
                 )) {
                     try { step() } catch (_: Exception) {}
                 }
@@ -140,6 +146,36 @@ class UsageMonitorService : Service() {
             tracked++
         }
         prefs.saveStats(stats.copy(totalReclaimedMinutes = reclaimed, daysTracked = tracked, lastProcessedDate = today))
+    }
+
+    /** >= 150s of Duolingo in the foreground today counts as studied; tell Kasane once a day. */
+    private suspend fun checkDuolingo() {
+        val today = repo.todayKey()
+        val ms = tracker.todayForegroundMillis()[LumeBus.DUOLINGO] ?: 0L
+        if (!DuolingoRule.shouldLog(ms, prefs.getDuolingoLoggedDay(), today)) return
+        LumeBus.sendLogCheck(this, "duolingo", true)
+        prefs.setDuolingoLoggedDay(today)
+    }
+
+    /** Daily ECO_METRICS, plus an evening kept/exception RULE_EVENT per active rule. */
+    private suspend fun sendEcosystemUpdates() {
+        val now = System.currentTimeMillis()
+        val today = repo.todayKey()
+        val hour = ExceptionPolicy.hourOf(now)
+        if (hour >= 21 && prefs.getMetricsSentDay() != today) {
+            val counters = prefs.getEcoCounters(today).first()
+            val ytMin = tracker.todayForegroundMinutes()["com.google.android.youtube"] ?: 0
+            LumeBus.sendEcoMetrics(this, prefs.getStats().first().totalReclaimedMinutes, ytMin, counters.shortVideoBlocks)
+            prefs.setMetricsSentDay(today)
+        }
+        if (hour >= 21 && prefs.getKeptSentDay() != today) {
+            prefs.getRestrictions().first().filter { it.enabled }.forEach { r ->
+                val kind = if (ExceptionPolicy.activeState(r, now) == ExceptionState.PLANNED)
+                    LumeBus.RuleKind.EXCEPTION else LumeBus.RuleKind.KEPT
+                LumeBus.sendRuleEvent(this, VowRepository.ruleId(r.type), kind)
+            }
+            prefs.setKeptSentDay(today)
+        }
     }
 
     private var windDownNotifiedOn = ""

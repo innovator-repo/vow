@@ -5,6 +5,7 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.admin.DevicePolicyManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import com.vow.app.data.model.ExceptionPolicy
 import com.vow.app.data.model.RestrictionType
 import com.vow.app.data.prefs.VowPreferences
 import com.vow.app.data.repository.VowRepository
@@ -102,7 +103,17 @@ class VowAccessibilityService : AccessibilityService() {
         if (last != null && last.first == packageName && now - last.second < 1500) return
         lastBlock = packageName to now
         performGlobalAction(GLOBAL_ACTION_HOME)
-        BlockActivity.show(this, reason.title, reason.message)
+        BlockActivity.show(this, reason.title, reason.message, reason.type)
+    }
+
+    private var lastCountedBlock = 0L
+
+    /** One attempt per second at most: BACK can fire on several events for the same swipe. */
+    private suspend fun countShortVideoBlock() {
+        val now = System.currentTimeMillis()
+        if (now - lastCountedBlock < 1000) return
+        lastCountedBlock = now
+        prefs.updateEcoCounters(ExceptionPolicy.dayKey(now)) { it.copy(shortVideoBlocks = it.shortVideoBlocks + 1) }
     }
 
     private suspend fun shortVideoBlocked(): Boolean =
@@ -114,7 +125,10 @@ class VowAccessibilityService : AccessibilityService() {
         if (ev.type != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && ev.type != AccessibilityEvent.TYPE_VIEW_SCROLLED) return
         if (!shortVideoBlocked()) return
         val root = rootInActiveWindow ?: return
-        if (isInShortVideoSection(root, ev.pkg, indicators)) performGlobalAction(GLOBAL_ACTION_BACK)
+        if (isInShortVideoSection(root, ev.pkg, indicators)) {
+            performGlobalAction(GLOBAL_ACTION_BACK)
+            countShortVideoBlock()
+        }
     }
 
     private fun isInShortVideoSection(root: AccessibilityNodeInfo, pkg: String, indicators: List<String>): Boolean {

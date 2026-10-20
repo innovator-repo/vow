@@ -25,8 +25,13 @@ class UsageTracker(private val context: Context) {
             .values.sum()
     }
 
+    fun foregroundMinutes(from: Long, to: Long): Map<String, Int> =
+        foregroundMillis(from, to).mapValues { (it.value / 60_000L).toInt() }
+
+    fun todayForegroundMillis(): Map<String, Long> = foregroundMillis(startOfDay(0), System.currentTimeMillis())
+
     @Suppress("DEPRECATION")
-    fun foregroundMinutes(from: Long, to: Long): Map<String, Int> {
+    fun foregroundMillis(from: Long, to: Long): Map<String, Long> {
         val totals = HashMap<String, Long>()
         val openedAt = HashMap<String, Long>()
         val events = usm.queryEvents(from, to)
@@ -42,7 +47,7 @@ class UsageTracker(private val context: Context) {
             }
         }
         for ((pkg, start) in openedAt) totals[pkg] = (totals[pkg] ?: 0L) + (to - start)
-        return totals.mapValues { (it.value / 60_000L).toInt() }
+        return totals
     }
 
     /** Has the system recorded anything for that day? (Distinguishes "no use" from "no data".) */
