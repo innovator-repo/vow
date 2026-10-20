@@ -38,4 +38,11 @@ class LumeBusTest {
         val planned = ExceptionPolicy.declare(off, "x", now, 6)
         assertEquals(2, VowStatusProvider.statusRow(listOf(on, planned), 0, now)[1])
     }
+
+    @Test fun ruleEventParsing() {
+        assertEquals("ren|slip|5", RuleEventParser.encode("ren", "slip", 5))
+        assertNull(RuleEventParser.encode("ren", "bogus", 5))
+        assertNull(RuleEventParser.encode(null, "kept", 5))
+        assertNull(RuleEventParser.encode("a|b", "kept", 5))
+    }
 }

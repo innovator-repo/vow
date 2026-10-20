@@ -82,6 +82,15 @@
             android:readPermission="app.lume.permission.ECOSYSTEM_SYNC"
             android:writePermission="app.lume.permission.ECOSYSTEM_SYNC" />
 
+        <receiver
+            android:name=".ipc.RuleEventReceiver"
+            android:exported="true"
+            android:permission="app.lume.permission.ECOSYSTEM_SYNC">
+            <intent-filter>
+                <action android:name="app.lume.action.RULE_EVENT" />
+            </intent-filter>
+        </receiver>
+
         <!-- Device Admin Receiver -->
         <receiver
             android:name=".service.admin.VowDeviceAdminReceiver"

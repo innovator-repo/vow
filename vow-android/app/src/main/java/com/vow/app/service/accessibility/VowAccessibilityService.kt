@@ -8,6 +8,8 @@ import android.view.accessibility.AccessibilityNodeInfo
 import com.vow.app.data.model.ExceptionPolicy
 import com.vow.app.data.model.RestrictionType
 import com.vow.app.data.prefs.VowPreferences
+import com.vow.app.ipc.DuolingoRule
+import com.vow.app.ipc.LumeBus
 import com.vow.app.data.repository.VowRepository
 import com.vow.app.service.admin.VowDeviceAdminReceiver
 import com.vow.app.service.blocking.BlockPolicy
@@ -67,6 +69,7 @@ class VowAccessibilityService : AccessibilityService() {
             while (isActive) {
                 delay(20_000)
                 currentApp?.let { pkg -> runCatching { enforceAppRules(pkg) } }
+                runCatching { trackDuolingo(currentApp) }
             }
         }
     }
@@ -81,6 +84,7 @@ class VowAccessibilityService : AccessibilityService() {
         if (ev.type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
             ev.pkg != packageName && ev.pkg != "com.android.systemui"
         ) {
+            if (currentApp != ev.pkg) trackDuolingo(ev.pkg)
             currentApp = ev.pkg
             enforceAppRules(ev.pkg)
         }
@@ -104,6 +108,26 @@ class VowAccessibilityService : AccessibilityService() {
         lastBlock = packageName to now
         performGlobalAction(GLOBAL_ACTION_HOME)
         BlockActivity.show(this, reason.title, reason.message, reason.type)
+    }
+
+    private var duolingoSince = 0L
+
+    /**
+     * Second source for the Duolingo check (UsageMonitorService is the first): time inside com.duolingo is
+     * measured here from window changes, and logged once it reaches 150s, while open or on leaving.
+     */
+    private suspend fun trackDuolingo(foreground: String?) {
+        val now = System.currentTimeMillis()
+        val inDuolingo = foreground == LumeBus.DUOLINGO
+        if (inDuolingo && duolingoSince == 0L) duolingoSince = now
+        if (duolingoSince != 0L) {
+            val today = ExceptionPolicy.dayKey(now)
+            if (DuolingoRule.shouldLog(now - duolingoSince, prefs.getDuolingoLoggedDay(), today)) {
+                LumeBus.sendLogCheck(this, "duolingo", true)
+                prefs.setDuolingoLoggedDay(today)
+            }
+        }
+        if (!inDuolingo) duolingoSince = 0L
     }
 
     private var lastCountedBlock = 0L

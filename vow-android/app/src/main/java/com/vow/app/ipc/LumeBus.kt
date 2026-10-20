@@ -65,3 +65,14 @@ object DuolingoRule {
     fun shouldLog(foregroundMs: Long, loggedDay: String, today: String) =
         foregroundMs >= THRESHOLD_MS && loggedDay != today
 }
+
+/** Inbound RULE_EVENT (e.g. from Kasane). Recorded only; it never loosens or tightens a restriction. */
+object RuleEventParser {
+    private val KINDS = setOf("slip", "kept", "exception")
+
+    /** "rule|kind|millis", or null when the extras are missing or not one of the known kinds. */
+    fun encode(rule: String?, kind: String?, now: Long): String? {
+        if (rule.isNullOrBlank() || rule.length > 64 || '|' in rule || kind !in KINDS) return null
+        return "$rule|$kind|$now"
+    }
+}

@@ -33,6 +33,7 @@ class VowPreferences(private val context: Context) {
         private val KEY_DEVICE_OWNER = booleanPreferencesKey("is_device_owner")
         private val KEY_PENDING_CHANGES = stringPreferencesKey("pending_changes")
         private val KEY_ECO = stringPreferencesKey("eco_counters")
+        private val KEY_LAST_RULE_EVENT = stringPreferencesKey("last_rule_event")
         private val KEY_DUOLINGO_DAY = stringPreferencesKey("duolingo_logged_day")
         private val KEY_METRICS_DAY = stringPreferencesKey("eco_metrics_sent_day")
         private val KEY_KEPT_DAY = stringPreferencesKey("rule_kept_sent_day")
@@ -62,6 +63,10 @@ class VowPreferences(private val context: Context) {
                 .put("redirected", n.redirected).toString()
         }
     }
+
+    /** Last RULE_EVENT received from the ecosystem, as "rule|kind|millis" (informational only). */
+    fun getLastRuleEvent(): Flow<String> = context.dataStore.data.map { it[KEY_LAST_RULE_EVENT] ?: "" }
+    suspend fun setLastRuleEvent(value: String) { context.dataStore.edit { it[KEY_LAST_RULE_EVENT] = value } }
 
     suspend fun getDuolingoLoggedDay(): String = context.dataStore.data.first()[KEY_DUOLINGO_DAY] ?: ""
     suspend fun setDuolingoLoggedDay(day: String) { context.dataStore.edit { it[KEY_DUOLINGO_DAY] = day } }
