@@ -1,7 +1,9 @@
 package com.vow.app.ui.screens.stats
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -29,6 +31,15 @@ fun StatsScreen(
     val youtubeAllowance by repo.prefs.getYouTubeAllowance().collectAsState(
         initial = com.vow.app.data.model.YouTubeAllowance()
     )
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // Screen time for today and the six days before it, oldest first, over every app but launchers.
+    val dailyUsage by produceState<List<Int>>(emptyList()) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val tracker = com.vow.app.service.blocking.UsageTracker(context)
+            (6 downTo 0).map { tracker.screenTimeMinutes(it) }
+        }
+    }
 
     val activeCount = restrictions.count { it.enabled }
     val sealedCount = restrictions.count { it.sealState == SealState.SEALED }
@@ -95,6 +106,62 @@ fun StatsScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+
+            // Overall daily usage
+            if (dailyUsage.isNotEmpty()) {
+                val today = dailyUsage.last()
+                val average = dailyUsage.average().toInt()
+                val peak = dailyUsage.max().coerceAtLeast(stats.baselineDailyMinutes.toInt()).coerceAtLeast(1)
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Screen time, all apps", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Today")
+                            Text("${today / 60}h ${today % 60}m")
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("7-day average")
+                            Text("${average / 60}h ${average % 60}m")
+                        }
+                        if (stats.baselineDailyMinutes > 0) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Your baseline")
+                                Text("${stats.baselineDailyMinutes / 60}h ${stats.baselineDailyMinutes % 60}m")
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            dailyUsage.forEachIndexed { i, minutes ->
+                                val shown by androidx.compose.animation.core.animateFloatAsState(
+                                    minutes.toFloat() / peak,
+                                    com.vow.app.designsystem.LumeMotion.spatial(),
+                                    label = "usage$i"
+                                )
+                                val day = java.time.LocalDate.now().minusDays((6 - i).toLong())
+                                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Box(Modifier.height(80.dp).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+                                        Box(
+                                            Modifier.fillMaxWidth().height((80f * shown).coerceAtLeast(4f).dp)
+                                                .background(VowGreen.copy(alpha = 0.35f + 0.65f * shown), RoundedCornerShape(6.dp))
+                                        )
+                                    }
+                                    Text(
+                                        day.dayOfWeek.getDisplayName(java.time.format.TextStyle.NARROW, java.util.Locale.getDefault()),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
             // YouTube stats
             Card(modifier = Modifier.fillMaxWidth()) {
