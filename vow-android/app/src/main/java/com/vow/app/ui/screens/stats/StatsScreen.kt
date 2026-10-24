@@ -41,6 +41,25 @@ fun StatsScreen(
         }
     }
 
+    // The most-used apps over the last 7 days, as (label, minutes).
+    val topApps by produceState<List<Pair<String, Int>>>(emptyList()) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val tracker = com.vow.app.service.blocking.UsageTracker(context)
+            val pm = context.packageManager
+            val skip = pm.queryIntentActivities(
+                android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_HOME), 0
+            ).map { it.activityInfo.packageName }.toSet() + setOf(context.packageName, "com.android.systemui")
+            tracker.foregroundMinutes(
+                com.vow.app.service.blocking.UsageTracker.startOfDay(6), System.currentTimeMillis()
+            ).filterKeys { it !in skip }
+                .entries.sortedByDescending { it.value }.take(5)
+                .map { (pkg, minutes) ->
+                    val label = try { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() } catch (e: Exception) { pkg }
+                    label to minutes
+                }
+        }
+    }
+
     val activeCount = restrictions.count { it.enabled }
     val sealedCount = restrictions.count { it.sealState == SealState.SEALED }
 
@@ -155,6 +174,66 @@ fun StatsScreen(
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Usage analytics: best and worst day, trend against the baseline, and the top apps.
+            if (dailyUsage.size == 7 && dailyUsage.any { it > 0 }) {
+                val days = (6 downTo 0).map { java.time.LocalDate.now().minusDays(it.toLong()) }
+                val bestIndex = dailyUsage.indices.minByOrNull { dailyUsage[it] } ?: 0
+                val worstIndex = dailyUsage.indices.maxByOrNull { dailyUsage[it] } ?: 0
+                fun dayName(i: Int) = days[i].dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.getDefault())
+                val firstHalf = dailyUsage.take(3).average()
+                val secondHalf = dailyUsage.takeLast(3).average()
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Analytics", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Lightest day")
+                            Text("${dayName(bestIndex)}, ${dailyUsage[bestIndex] / 60}h ${dailyUsage[bestIndex] % 60}m")
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Heaviest day")
+                            Text("${dayName(worstIndex)}, ${dailyUsage[worstIndex] / 60}h ${dailyUsage[worstIndex] % 60}m")
+                        }
+                        if (firstHalf > 0) {
+                            val change = ((secondHalf - firstHalf) / firstHalf * 100).toInt()
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Last 3 days vs the 3 before")
+                                Text(if (change <= 0) "${-change}% less" else "$change% more")
+                            }
+                        }
+                        if (stats.baselineDailyMinutes > 0) {
+                            val vsBaseline = ((dailyUsage.average() - stats.baselineDailyMinutes) / stats.baselineDailyMinutes * 100).toInt()
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Average vs your baseline")
+                                Text(if (vsBaseline <= 0) "${-vsBaseline}% less" else "$vsBaseline% more")
+                            }
+                        }
+                        if (topApps.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text("Most used apps, 7 days", style = MaterialTheme.typography.labelLarge)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            val topMinutes = topApps.first().second.coerceAtLeast(1)
+                            topApps.forEach { (label, minutes) ->
+                                val shown by androidx.compose.animation.core.animateFloatAsState(
+                                    minutes.toFloat() / topMinutes,
+                                    com.vow.app.designsystem.LumeMotion.effects(),
+                                    label = "app$label"
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(label, maxLines = 1, modifier = Modifier.weight(1f))
+                                    Text("${minutes / 60}h ${minutes % 60}m", style = MaterialTheme.typography.bodySmall)
+                                }
+                                Box(Modifier.fillMaxWidth().height(6.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(3.dp))) {
+                                    Box(Modifier.fillMaxHeight().fillMaxWidth(shown).background(VowGreen, RoundedCornerShape(3.dp)))
                                 }
                             }
                         }
