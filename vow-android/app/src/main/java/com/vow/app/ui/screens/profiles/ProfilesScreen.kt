@@ -117,6 +117,7 @@ fun ProfilesScreen(
                 }
             } else {
                 items(profiles, key = { it.id }) { profile ->
+ androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.animateItem()) {
                     ProfileCard(
                         profile = profile,
                         onEdit = { onEditProfile(profile.id) },
@@ -135,6 +136,7 @@ fun ProfilesScreen(
                         }
                     )
                 }
+}
             }
         }
     }

@@ -96,6 +96,7 @@ fun CoolingOffScreen(
             if (pending.isNotEmpty()) {
                 item { SectionLabel("Turning off a protection") }
                 items(pending, key = { it.id }) { request ->
+ androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.animateItem()) {
                     RequestCard(request, now, dateFormat,
                         onComplete = {
                             scope.launch {
@@ -116,14 +117,17 @@ fun CoolingOffScreen(
                         onCancel = { haptics.confirm(); scope.launch { repo.cancelLoosening(request.id) } }
                     )
                 }
+}
             }
             if (waiting.isNotEmpty()) {
                 item { SectionLabel("Settings changes") }
                 items(waiting, key = { it.id }) { change ->
+ androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.animateItem()) {
                     ChangeCard(change, now, dateFormat) {
                         haptics.confirm(); scope.launch { repo.cancelPendingChange(change.id) }
                     }
                 }
+}
             }
             item { Spacer(Modifier.height(24.dp)) }
         }

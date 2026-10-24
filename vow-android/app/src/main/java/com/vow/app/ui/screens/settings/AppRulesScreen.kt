@@ -70,6 +70,7 @@ fun AppRulesScreen(
                         modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
                 }
                 items(appRules, key = { it.packageName }) { rule ->
+ androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.animateItem()) {
                     AppRuleCard(
                         rule = rule,
                         onUpdate = { updated ->
@@ -80,6 +81,7 @@ fun AppRulesScreen(
                         }
                     )
                 }
+}
             }
 
             // Show available apps
@@ -92,6 +94,7 @@ fun AppRulesScreen(
             }
 
             items(available, key = { it.packageName }) { app ->
+ androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.animateItem()) {
                 OutlinedCard(
                     onClick = {
                         scope.launch {
@@ -114,6 +117,7 @@ fun AppRulesScreen(
                     )
                 }
             }
+}
         }
     }
 }

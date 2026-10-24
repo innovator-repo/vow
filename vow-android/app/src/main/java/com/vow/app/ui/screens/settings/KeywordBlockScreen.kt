@@ -86,6 +86,7 @@ fun KeywordBlockScreen(
 
             LazyColumn {
                 items(keywords, key = { it.id }) { keyword ->
+ androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.animateItem()) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -128,6 +129,7 @@ fun KeywordBlockScreen(
                         }
                     }
                 }
+}
             }
         }
     }
