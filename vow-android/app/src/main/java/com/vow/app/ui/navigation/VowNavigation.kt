@@ -66,12 +66,12 @@ fun VowNavHost(
         startDestination = startDestination,
         modifier = modifier,
         enterTransition = {
-            slideInHorizontally(tween(320, easing = FastOutSlowInEasing)) { it / 5 } + fadeIn(tween(260))
+            slideInHorizontally(com.vow.app.designsystem.LumeMotion.spatial()) { it / 5 } + fadeIn(com.vow.app.designsystem.LumeMotion.effects())
         },
-        exitTransition = { scaleOut(tween(320), targetScale = 0.96f) + fadeOut(tween(200)) },
-        popEnterTransition = { scaleIn(tween(320), initialScale = 0.96f) + fadeIn(tween(260)) },
+        exitTransition = { scaleOut(com.vow.app.designsystem.LumeMotion.spatial(), targetScale = 0.96f) + fadeOut(com.vow.app.designsystem.LumeMotion.effects()) },
+        popEnterTransition = { scaleIn(com.vow.app.designsystem.LumeMotion.spatial(), initialScale = 0.96f) + fadeIn(com.vow.app.designsystem.LumeMotion.effects()) },
         popExitTransition = {
-            slideOutHorizontally(tween(280, easing = FastOutSlowInEasing)) { it / 5 } + fadeOut(tween(200))
+            slideOutHorizontally(com.vow.app.designsystem.LumeMotion.spatial()) { it / 5 } + fadeOut(com.vow.app.designsystem.LumeMotion.effects())
         }
     ) {
         composable(Screen.Setup.route) {
