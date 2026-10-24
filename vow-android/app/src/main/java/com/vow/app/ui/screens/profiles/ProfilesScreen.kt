@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.vow.app.ui.screens.profiles
 
 import androidx.compose.foundation.layout.*
@@ -117,7 +119,7 @@ fun ProfilesScreen(
                 }
             } else {
                 items(profiles, key = { it.id }) { profile ->
- androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.animateItem()) {
+ androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.animateItemPlacement()) {
                     ProfileCard(
                         profile = profile,
                         onEdit = { onEditProfile(profile.id) },

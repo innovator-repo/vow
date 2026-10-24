@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 
 package com.vow.app.ui.screens.settings
 
@@ -70,7 +70,7 @@ fun AppRulesScreen(
                         modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
                 }
                 items(appRules, key = { it.packageName }) { rule ->
- androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.animateItem()) {
+ androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.animateItemPlacement()) {
                     AppRuleCard(
                         rule = rule,
                         onUpdate = { updated ->
@@ -94,7 +94,7 @@ fun AppRulesScreen(
             }
 
             items(available, key = { it.packageName }) { app ->
- androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.animateItem()) {
+ androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.animateItemPlacement()) {
                 OutlinedCard(
                     onClick = {
                         scope.launch {

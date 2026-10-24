@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.vow.app.ui.screens.settings
 
 import androidx.compose.foundation.layout.*
@@ -86,7 +88,7 @@ fun KeywordBlockScreen(
 
             LazyColumn {
                 items(keywords, key = { it.id }) { keyword ->
- androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.animateItem()) {
+ androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.animateItemPlacement()) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()

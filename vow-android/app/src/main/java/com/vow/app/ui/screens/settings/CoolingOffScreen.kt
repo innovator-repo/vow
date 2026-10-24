@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.vow.app.ui.screens.settings
 
 import android.widget.Toast
@@ -96,7 +98,7 @@ fun CoolingOffScreen(
             if (pending.isNotEmpty()) {
                 item { SectionLabel("Turning off a protection") }
                 items(pending, key = { it.id }) { request ->
- androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.animateItem()) {
+ androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.animateItemPlacement()) {
                     RequestCard(request, now, dateFormat,
                         onComplete = {
                             scope.launch {
@@ -122,7 +124,7 @@ fun CoolingOffScreen(
             if (waiting.isNotEmpty()) {
                 item { SectionLabel("Settings changes") }
                 items(waiting, key = { it.id }) { change ->
- androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.animateItem()) {
+ androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.animateItemPlacement()) {
                     ChangeCard(change, now, dateFormat) {
                         haptics.confirm(); scope.launch { repo.cancelPendingChange(change.id) }
                     }
