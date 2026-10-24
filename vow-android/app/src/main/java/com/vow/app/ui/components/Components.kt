@@ -73,7 +73,7 @@ fun VowCard(
     val haptics = rememberHaptics()
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val animatedColor by animateColorAsState(containerColor, tween(300), label = "cardColor")
+    val animatedColor by animateColorAsState(containerColor, com.vow.app.designsystem.LumeMotion.effects(), label = "cardColor")
     val border = borderBrush
         ?: Brush.linearGradient(listOf(MaterialTheme.colorScheme.outline, MaterialTheme.colorScheme.outlineVariant))
 
