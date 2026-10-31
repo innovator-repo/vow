@@ -56,7 +56,7 @@ fun LockScreen(repo: VowRepository, onUnlocked: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        IconBubble(Icons.Default.Lock, VowTeal, size = 72.dp)
+        IconBubble(Icons.Default.Lock, vowAccent, size = 72.dp)
         Spacer(Modifier.height(20.dp))
         Text("Vow is locked", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(8.dp))

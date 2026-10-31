@@ -94,7 +94,7 @@ fun StatsScreen(
             Text(
                 if (shown >= 60) "${shown / 60}h ${shown % 60}m" else "${shown}m",
                 style = MaterialTheme.typography.displayMedium.copy(
-                    brush = androidx.compose.ui.graphics.Brush.linearGradient(listOf(VowGreen, com.vow.app.ui.theme.VowTeal))
+                    brush = androidx.compose.ui.graphics.Brush.linearGradient(listOf(VowGreen, com.vow.app.ui.theme.vowAccent))
                 )
             )
             Text(

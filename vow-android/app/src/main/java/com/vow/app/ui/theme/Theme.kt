@@ -21,10 +21,10 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = VowTeal,
-    onPrimary = Color(0xFF04201C),
-    primaryContainer = Color(0xFF0F2F2C),
-    onPrimaryContainer = Color(0xFFA7F3E4),
+    primary = VowCyanDark,
+    onPrimary = Color(0xFF00212A),
+    primaryContainer = Color(0xFF0C3340),
+    onPrimaryContainer = Color(0xFFBDEBF5),
     secondary = VowAmber,
     onSecondary = Color(0xFF2A1D00),
     secondaryContainer = Color(0xFF33270C),
@@ -51,10 +51,10 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = VowTealDeep,
+    primary = VowCyan,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFCCFBF1),
-    onPrimaryContainer = Color(0xFF134E4A),
+    primaryContainer = Color(0xFFCDEEF7),
+    onPrimaryContainer = Color(0xFF04303C),
     secondary = Color(0xFFB45309),
     onSecondary = Color.White,
     secondaryContainer = Color(0xFFFEF3C7),
@@ -83,6 +83,12 @@ private val VowShapes = Shapes(
     large = RoundedCornerShape(28.dp),
     extraLarge = RoundedCornerShape(36.dp)
 )
+
+val LocalDarkTheme = androidx.compose.runtime.compositionLocalOf { true }
+
+/** The Vow accent for the current surface: deep cyan on light, soft cyan on dark. */
+val vowAccent: Color
+    @Composable get() = if (LocalDarkTheme.current) VowCyanDark else VowCyan
 
 val LocalCircadianPhase = androidx.compose.runtime.compositionLocalOf { CircadianPhase.DAY }
 
@@ -127,7 +133,7 @@ fun VowTheme(
         }
     }
 
-    androidx.compose.runtime.CompositionLocalProvider(LocalCircadianPhase provides phase) {
+    androidx.compose.runtime.CompositionLocalProvider(LocalCircadianPhase provides phase, LocalDarkTheme provides darkTheme) {
     MaterialTheme(
         colorScheme = colorScheme,
         typography = VowTypography,

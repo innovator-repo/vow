@@ -33,7 +33,7 @@ import kotlinx.coroutines.launch
 private const val TOTAL_SECONDS = 90
 
 private enum class Phase(val label: String, val color: Color, val cue: BreathCue) {
-    IN("Breathe in", VowTeal, BreathCue.INHALE),
+    IN("Breathe in", com.vow.app.ui.theme.VowCyanDark, BreathCue.INHALE),
     HOLD("Hold", VowSeal, BreathCue.HOLD),
     OUT("Breathe out", VowSky, BreathCue.EXHALE)
 }
@@ -84,6 +84,7 @@ fun BreathingScreen(
         1f - secondsRemaining / TOTAL_SECONDS.toFloat(), tween(1000, easing = LinearEasing), label = "overall"
     )
     val trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+    val accent = vowAccent
 
     Box(
         modifier = Modifier
@@ -120,7 +121,7 @@ fun BreathingScreen(
                     drawArc(trackColor, -90f, 360f, false, tl, arc, style = Stroke(ring, cap = StrokeCap.Round))
                     rotate(-90f) {
                         drawArc(
-                            brush = Brush.sweepGradient(listOf(VowTeal, VowSky, VowSeal, VowTeal)),
+                            brush = Brush.sweepGradient(listOf(accent, VowSky, VowSeal, accent)),
                             startAngle = 0f, sweepAngle = 360f * overall, useCenter = false,
                             topLeft = tl, size = arc, style = Stroke(ring, cap = StrokeCap.Round)
                         )

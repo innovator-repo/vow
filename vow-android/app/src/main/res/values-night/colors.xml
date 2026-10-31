@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="vow_accent">#6CCBE0</color>
+    <color name="vow_widget_bg">#131922</color>
+    <color name="vow_widget_text">#E8EEF6</color>
+    <color name="vow_widget_muted">#8FA0B5</color>
+    <color name="vow_widget_track_off">#263142</color>
+</resources>

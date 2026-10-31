@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.vow.app.service.vpn.PrivateDns
 import com.vow.app.ui.components.*
 import com.vow.app.ui.theme.vowWarm
-import com.vow.app.ui.theme.VowTeal
+import com.vow.app.ui.theme.vowAccent
 
 /**
  * Shown when Android's VPN permission prompt can't be opened — some phones ship without it or
@@ -54,7 +54,7 @@ fun ContentFilterHelpDialog(onRetry: () -> Unit, onDismiss: () -> Unit) {
                 )
                 Spacer(Modifier.height(8.dp))
                 Row {
-                    QuietButton("Open app info", color = VowTeal, onClick = { SystemScreens.openVpnDialogsAppInfo(context) })
+                    QuietButton("Open app info", color = vowAccent, onClick = { SystemScreens.openVpnDialogsAppInfo(context) })
                     QuietButton("Try again", color = vowWarm, onClick = { haptics.click(); onRetry() })
                 }
 
@@ -74,7 +74,7 @@ fun ContentFilterHelpDialog(onRetry: () -> Unit, onDismiss: () -> Unit) {
                     VowCard(
                         modifier = Modifier.padding(vertical = 4.dp),
                         onClick = { chosen = provider },
-                        containerColor = if (provider == chosen) VowTeal.copy(alpha = 0.10f)
+                        containerColor = if (provider == chosen) vowAccent.copy(alpha = 0.10f)
                         else MaterialTheme.colorScheme.background
                     ) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -84,7 +84,7 @@ fun ContentFilterHelpDialog(onRetry: () -> Unit, onDismiss: () -> Unit) {
                                 Text(
                                     provider.hostname,
                                     style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                                    color = VowTeal
+                                    color = vowAccent
                                 )
                                 Text(
                                     provider.detail,
@@ -98,13 +98,13 @@ fun ContentFilterHelpDialog(onRetry: () -> Unit, onDismiss: () -> Unit) {
 
                 Spacer(Modifier.height(10.dp))
                 Row {
-                    QuietButton("Copy hostname", color = VowTeal, onClick = {
+                    QuietButton("Copy hostname", color = vowAccent, onClick = {
                         haptics.confirm()
                         context.getSystemService(ClipboardManager::class.java)
                             .setPrimaryClip(ClipData.newPlainText("Private DNS", chosen.hostname))
                         Toast.makeText(context, "Copied — paste it into Private DNS", Toast.LENGTH_LONG).show()
                     })
-                    QuietButton("Open Private DNS", color = VowTeal, onClick = { SystemScreens.openPrivateDns(context) })
+                    QuietButton("Open Private DNS", color = vowAccent, onClick = { SystemScreens.openPrivateDns(context) })
                 }
             }
         },

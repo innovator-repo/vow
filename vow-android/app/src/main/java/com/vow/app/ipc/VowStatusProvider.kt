@@ -7,9 +7,11 @@ import android.database.MatrixCursor
 import android.net.Uri
 import com.vow.app.data.model.ExceptionPolicy
 import com.vow.app.data.model.ExceptionState
+import com.vow.app.data.model.Profile
 import com.vow.app.data.model.Restriction
 import com.vow.app.data.model.RestrictionType
 import com.vow.app.data.prefs.VowPreferences
+import com.vow.app.focus.FocusLogic
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
@@ -25,7 +27,8 @@ class VowStatusProvider : ContentProvider() {
             statusRow(
                 prefs.getRestrictions().first(),
                 prefs.getStats().first().totalReclaimedMinutes,
-                System.currentTimeMillis()
+                System.currentTimeMillis(),
+                prefs.getProfiles().first()
             )
         }
         return MatrixCursor(COLUMNS).apply { addRow(row.toTypedArray()) }
@@ -37,15 +40,21 @@ class VowStatusProvider : ContentProvider() {
     override fun update(uri: Uri, values: ContentValues?, selection: String?, args: Array<out String>?) = 0
 
     companion object {
-        val COLUMNS = arrayOf("reclaimedMinutes", "rulesKept", "rulesTotal", "sleepLock")
+        val COLUMNS = arrayOf("reclaimedMinutes", "rulesKept", "rulesTotal", "sleepLock", "focusOn", "profileName")
 
         /** A rule counts as kept while it is on, or while a planned exception covers today (no slip penalty). */
-        fun statusRow(restrictions: List<Restriction>, reclaimedMinutes: Long, now: Long): List<Any> {
+        fun statusRow(
+            restrictions: List<Restriction>,
+            reclaimedMinutes: Long,
+            now: Long,
+            profiles: List<Profile> = emptyList()
+        ): List<Any> {
             val kept = restrictions.count {
                 it.enabled || ExceptionPolicy.activeState(it, now) == ExceptionState.PLANNED
             }
             val sleep = restrictions.any { it.type == RestrictionType.NIGHT_MODE && it.enabled }
-            return listOf(reclaimedMinutes.coerceIn(0, Int.MAX_VALUE.toLong()).toInt(), kept, restrictions.size, if (sleep) 1 else 0)
+            return listOf(reclaimedMinutes.coerceIn(0, Int.MAX_VALUE.toLong()).toInt(), kept, restrictions.size, if (sleep) 1 else 0,
+                if (FocusLogic.focusOn(profiles)) 1 else 0, FocusLogic.profileName(profiles))
         }
     }
 }

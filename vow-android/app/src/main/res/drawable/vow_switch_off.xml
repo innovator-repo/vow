@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="56dp" android:height="32dp" android:viewportWidth="56" android:viewportHeight="32">
+    <path android:fillColor="@color/vow_widget_track_off" android:pathData="M16,0h24a16,16 0 0,1 0,32h-24a16,16 0 0,1 0,-32z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M5,16a11,11 0 1,0 22,0a11,11 0 1,0 -22,0z" />
+</vector>

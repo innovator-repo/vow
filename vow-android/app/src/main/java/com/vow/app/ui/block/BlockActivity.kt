@@ -123,7 +123,7 @@ private fun BlockScreen(title: String, message: String, type: RestrictionType?, 
         ) {
             StaggeredItem(0) {
                 Box(Modifier.size(150.dp), contentAlignment = Alignment.Center) {
-                    Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(VowTeal.copy(alpha = glow), Color.Transparent)), CircleShape))
+                    Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(vowAccent.copy(alpha = glow), Color.Transparent)), CircleShape))
                     Box(Modifier.size(84.dp).background(AuroraBrush, CircleShape), contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Shield, contentDescription = null, tint = Ink, modifier = Modifier.size(40.dp))
                     }

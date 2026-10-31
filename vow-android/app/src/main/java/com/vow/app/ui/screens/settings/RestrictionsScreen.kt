@@ -109,7 +109,7 @@ private fun RestrictionCard(
     val isPendingSeal = restriction.sealState == SealState.PENDING_SEAL
 
     val haptics = rememberHaptics()
-    val accent = if (isSealed) VowSeal else VowTeal
+    val accent = if (isSealed) VowSeal else vowAccent
     if (planning) {
         PlanExceptionDialog(
             note = note, onNote = { note = it },
@@ -121,7 +121,7 @@ private fun RestrictionCard(
         modifier = Modifier.padding(vertical = 5.dp),
         containerColor = when {
             isSealed -> VowSeal.copy(alpha = 0.10f)
-            restriction.enabled -> VowTeal.copy(alpha = 0.06f)
+            restriction.enabled -> vowAccent.copy(alpha = 0.06f)
             else -> MaterialTheme.colorScheme.surfaceVariant
         },
         borderBrush = if (isSealed) Brush.linearGradient(listOf(VowSeal.copy(alpha = 0.7f), VowSealDeep.copy(alpha = 0.2f))) else null
@@ -234,10 +234,10 @@ private fun AddRestrictionSection(repo: VowRepository, existing: List<Restrictio
                 modifier = Modifier.padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconBubble(Icons.Default.Add, VowTeal, size = 32.dp)
+                IconBubble(Icons.Default.Add, vowAccent, size = 32.dp)
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(restrictionLabel(type), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                Text("Add", style = MaterialTheme.typography.labelLarge, color = VowTeal)
+                Text("Add", style = MaterialTheme.typography.labelLarge, color = vowAccent)
             }
         }
     }

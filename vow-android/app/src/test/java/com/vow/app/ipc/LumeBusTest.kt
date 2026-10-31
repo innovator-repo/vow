@@ -34,7 +34,8 @@ class LumeBusTest {
         val on = Restriction(type = RestrictionType.NIGHT_MODE)
         val off = Restriction(type = RestrictionType.DNS, enabled = false)
         val row = VowStatusProvider.statusRow(listOf(on, off), 120, now)
-        assertEquals(listOf<Any>(120, 1, 2, 1), row)
+        assertEquals(listOf<Any>(120, 1, 2, 1), row.take(4))
+        assertEquals(listOf<Any>(0, ""), row.drop(4))
         val planned = ExceptionPolicy.declare(off, "x", now, 6)
         assertEquals(2, VowStatusProvider.statusRow(listOf(on, planned), 0, now)[1])
     }

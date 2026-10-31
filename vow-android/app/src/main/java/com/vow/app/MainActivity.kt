@@ -43,7 +43,10 @@ class MainActivity : ComponentActivity() {
                             LockScreen(repo, onUnlocked = { unlocked = true })
                         else -> {
                             val start = remember { if (setupComplete == true) Screen.Home.route else Screen.Setup.route }
-                            VowNavHost(navController = rememberNavController(), repo = repo, startDestination = start)
+                            VowNavHost(
+                                navController = rememberNavController(), repo = repo, startDestination = start,
+                                openControls = intent?.getBooleanExtra(EXTRA_OPEN_CONTROLS, false) == true
+                            )
                         }
                     }
                 }
@@ -61,7 +64,10 @@ class MainActivity : ComponentActivity() {
         if (stoppedAt > 0 && SystemClock.elapsedRealtime() - stoppedAt > RELOCK_AFTER_MS) unlocked = false
     }
 
-    private companion object {
-        const val RELOCK_AFTER_MS = 5 * 60 * 1000L
+    companion object {
+        /** Set by the focus switch when turning off needs the app: opens the Controls drawer behind the lock. */
+        const val EXTRA_OPEN_CONTROLS = "open_controls"
+
+        private const val RELOCK_AFTER_MS = 5 * 60 * 1000L
     }
 }

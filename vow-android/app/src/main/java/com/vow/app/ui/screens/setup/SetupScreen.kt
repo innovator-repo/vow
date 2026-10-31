@@ -150,7 +150,7 @@ private fun WelcomeStep() {
             0.15f, 0.35f, infiniteRepeatable(tween(2400, easing = EaseInOutSine), RepeatMode.Reverse), label = "glow"
         )
         Box(Modifier.size(150.dp), contentAlignment = Alignment.Center) {
-            Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(VowTeal.copy(alpha = glow), Color.Transparent)), CircleShape))
+            Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(vowAccent.copy(alpha = glow), Color.Transparent)), CircleShape))
             Box(Modifier.size(84.dp).background(AuroraBrush, CircleShape), contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.Shield, contentDescription = null, tint = Ink, modifier = Modifier.size(40.dp))
             }
@@ -283,8 +283,8 @@ private fun ProtectionToggle(
     VowCard(
         modifier = Modifier.padding(vertical = 5.dp),
         onClick = { onCheckedChange(!checked) },
-        containerColor = if (checked) VowTeal.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surfaceVariant,
-        borderBrush = if (checked) Brush.linearGradient(listOf(VowTeal.copy(alpha = 0.55f), VowSky.copy(alpha = 0.15f))) else null
+        containerColor = if (checked) vowAccent.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surfaceVariant,
+        borderBrush = if (checked) Brush.linearGradient(listOf(vowAccent.copy(alpha = 0.55f), VowSky.copy(alpha = 0.15f))) else null
     ) {
         Row(
             modifier = Modifier

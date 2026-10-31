@@ -66,6 +66,33 @@
             </intent-filter>
         </activity>
 
+        <!-- vow://focus/toggle: no UI. On = no unlock needed; off always goes through the app lock. -->
+        <activity
+            android:name=".focus.FocusActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.Vow.Transparent">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="vow" android:host="focus" android:path="/toggle" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name=".widget.FocusWidgetProvider"
+            android:exported="true"
+            android:label="Vow Focus">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/focus_widget_info" />
+        </receiver>
+
         <activity
             android:name=".ui.block.BlockActivity"
             android:exported="false"

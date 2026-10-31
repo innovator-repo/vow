@@ -182,6 +182,7 @@ class VowPreferences(private val context: Context) {
 
     suspend fun saveProfiles(list: List<Profile>) {
         context.dataStore.edit { it[KEY_PROFILES] = profilesToJson(list) }
+        com.vow.app.widget.FocusWidgetProvider.refresh(context)
     }
 
     // App Rules

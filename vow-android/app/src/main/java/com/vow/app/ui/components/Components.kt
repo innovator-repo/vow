@@ -296,7 +296,7 @@ fun SectionLabel(text: String, modifier: Modifier = Modifier) {
 }
 
 /** Soft aurora glow behind the top of a screen. */
-fun Modifier.auroraGlow(color: Color = Color(0xFF2DD4BF), alpha: Float = 0.10f): Modifier = drawBehind {
+fun Modifier.auroraGlow(color: Color = Color(0xFF6CCBE0), alpha: Float = 0.10f): Modifier = drawBehind {
     drawCircle(
         brush = Brush.radialGradient(
             listOf(color.copy(alpha = alpha), Color.Transparent),

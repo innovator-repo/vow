@@ -3,10 +3,10 @@ package com.vow.app.designsystem
 import androidx.compose.ui.graphics.Color
 import java.util.Calendar
 
-/** Shared palette. Vow accents: Aurora Teal, Horizon Sky, Covenant Violet. */
+/** Shared palette. Vow accents: Deep Cyan, Horizon Sky, Covenant Violet. */
 object LumeColors {
-    val AuroraTeal = Color(0xFF2DD4BF)
-    val AuroraTealDeep = Color(0xFF0D9488)
+    val DeepCyanDark = Color(0xFF6CCBE0)
+    val DeepCyan = Color(0xFF0B6E8A)
     val HorizonSky = Color(0xFF38BDF8)
     val CovenantViolet = Color(0xFFA78BFA)
     val CovenantVioletDeep = Color(0xFF7C3AED)

@@ -28,6 +28,7 @@ import com.vow.app.ui.screens.bypass.BypassScreen
 import com.vow.app.ui.screens.bypass.BreathingScreen
 import com.vow.app.ui.screens.settings.AppRulesScreen
 import com.vow.app.ui.screens.settings.CoolingOffScreen
+import com.vow.app.ui.screens.settings.SettingsScreen
 
 sealed class Screen(val route: String) {
     object Setup : Screen("setup")
@@ -52,6 +53,7 @@ sealed class Screen(val route: String) {
     }
     object AppRules : Screen("app_rules")
     object CoolingOff : Screen("cooling_off")
+    object Settings : Screen("settings")
 }
 
 @Composable
@@ -59,6 +61,7 @@ fun VowNavHost(
     navController: NavHostController,
     repo: VowRepository,
     startDestination: String,
+    openControls: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -99,12 +102,26 @@ fun VowNavHost(
         composable(Screen.Home.route) {
             HomeScreen(
                 repo = repo,
-                onNavigateToRestrictions = { navController.navigate(Screen.Restrictions.route) },
-                onNavigateToProfiles = { navController.navigate(Screen.Profiles.route) },
-                onNavigateToNightMode = { navController.navigate(Screen.NightMode.route) },
+                openControls = openControls,
                 onNavigateToStats = { navController.navigate(Screen.Stats.route) },
-                onNavigateToAppRules = { navController.navigate(Screen.AppRules.route) },
-                onNavigateToCoolingOff = { navController.navigate(Screen.CoolingOff.route) }
+                onNavigateToRestrictions = { navController.navigate(Screen.Restrictions.route) },
+                onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                onNavigateToProfiles = { navController.navigate(Screen.Profiles.route) },
+                onNavigateToCoolingOff = { navController.navigate(Screen.CoolingOff.route) },
+                onNavigateToNightMode = { navController.navigate(Screen.NightMode.route) },
+                onNavigateToAppRules = { navController.navigate(Screen.AppRules.route) }
+            )
+        }
+
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onRestrictions = { navController.navigate(Screen.Restrictions.route) },
+                onProfiles = { navController.navigate(Screen.Profiles.route) },
+                onNightMode = { navController.navigate(Screen.NightMode.route) },
+                onAppRules = { navController.navigate(Screen.AppRules.route) },
+                onCoolingOff = { navController.navigate(Screen.CoolingOff.route) },
+                onStats = { navController.navigate(Screen.Stats.route) }
             )
         }
 

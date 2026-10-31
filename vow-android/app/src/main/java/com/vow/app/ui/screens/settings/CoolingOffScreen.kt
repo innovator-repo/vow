@@ -204,7 +204,7 @@ private fun ChangeCard(change: PendingChange, now: Long, dateFormat: SimpleDateF
                 Pill(remaining(change.maturesAt - now), VowSky)
             }
             Spacer(Modifier.height(8.dp))
-            QuietButton("Cancel this change", onClick = onCancel, color = VowTeal, modifier = Modifier.fillMaxWidth())
+            QuietButton("Cancel this change", onClick = onCancel, color = vowAccent, modifier = Modifier.fillMaxWidth())
         }
     }
 }
